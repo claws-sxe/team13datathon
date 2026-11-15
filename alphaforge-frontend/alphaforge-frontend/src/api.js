@@ -16,7 +16,7 @@ export async function sendMessage({ session_id, messages }) {
   if (!API_URL) return mockBackend({ session_id, messages });
 
   const last = messages[messages.length - 1];
-  const res = await fetch("http://18.212.81", {
+  const res = await fetch("https://forty-years-give.loca.lt", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
