@@ -66,6 +66,14 @@ class FakeAgent:
 
 def script(text):
     t = text.lower()
+    if "sans crypto" in t:  # profil dit en même temps que la demande, risque en fourchette
+        return [("update_profile", {"field": "crypto_preference", "value": "exclude"}),
+                ("update_profile", {"field": "horizon_years", "value": "7"}),
+                ("update_profile", {"field": "risk_tolerance", "value": "low_to_medium"})], \
+            lambda r: "Noté : pas de crypto, horizon de 7 ans."
+    if "je confirme une tolérance au risque faible" in t:
+        return [("update_profile", {"field": "risk_tolerance", "value": "low", "explicit_correction": True})], \
+            lambda r: "Profil enregistré. Je propose environ 60 % d'obligations et 40 % d'actions."  # chiffres inventés
     if "j'exclus agg" in t:
         return [("update_profile", {"field": "exclusions", "value": "AGG"}),
                 ("update_profile", {"field": "risk_tolerance", "value": "medium"}),
@@ -485,3 +493,50 @@ def test_fix2_build_and_explain_risks_calls_engine_once(env):
     _complete_profile(env, sid)
     body = env.post("Construis-moi un portefeuille et explique-moi les risques", sid)
     assert env.engine.invoke.call_count == 1 and body["triggered"] is True and body["route"] == "portfolio_engine"
+
+
+# ------------------------- correctif : brouillon de l'agent rejeté pendant une construction en attente
+def test_rejected_draft_with_unsupported_percentages_does_not_block_pending_build(env):
+    sid = "live-preview-0001"
+    first = env.post("Je veux un portefeuille fictif sans crypto, risque faible à modéré, horizon de 7 ans", sid)
+    assert first["route"] == "portfolio_clarification" and env.engine.invoke.call_count == 0
+    assert "une seule valeur" in first["reply"]  # « choisissez un niveau de risque »
+    assert app_module.SESSIONS.get_pending(sid)["fields"] == ["risk_tolerance"]
+
+    body = env.post("Je confirme une tolérance au risque faible.", sid)
+
+    # le brouillon de l'agent (60 % / 40 %) est bien rejeté par ses propres garde-fous...
+    draft = "Profil enregistré. Je propose environ 60 % d'obligations et 40 % d'actions."
+    rejected = mh.reply_guards(draft, "Je confirme une tolérance au risque faible.", [], None)
+    assert next(g for g in rejected if g["name"] == "percentages_supported_by_inputs_or_tools")["passed"] is False
+    # ... mais l'investisseur n'a pas à redemander : le moteur tourne une fois, avec le profil confirmé
+    assert env.engine.invoke.call_count == 1
+    assert json.loads(env.engine.invoke.call_args.kwargs["Payload"]) == {"parameters": [
+        {"name": "risk_profile", "value": "low"}, {"name": "horizon_years", "value": "7"}]}
+    assert body["triggered"] is True and body["route"] == "portfolio_engine" and body["status"] == "ok"
+    assert body["portfolio"] == ENGINE_WITH_AGG
+    assert "60 %" not in body["reply"] and "40 %" not in body["reply"].replace("AGG : 40,00 %", "")
+    assert "AGG : 40,00 %" in body["reply"] and mh._REPLIES["needs_review"] not in body["reply"]
+    # contrôles et preuves décrivent la réponse finale (moteur + contrôle du profil), garde-fous actifs et réussis
+    guards = {g["name"]: g["passed"] for g in body["checks"]["reply_guards"]}
+    assert guards == {"french_language": True, "no_conformity_claim_without_valid_conclusion": True,
+                      "percentages_supported_by_inputs_or_tools": True}
+    assert [t["tool"] for t in body["checks"]["tools"]] == ["update_profile", "PortfolioEngine", "check_profile_vs_portfolio"]
+    assert body["checks"]["engine_portfolio_review"]["check_status"] == "checked"
+    assert not any("60" in json.dumps(a) for a in body["evidence"]["actions"])
+    assert body["profile"]["risk"] == "faible" and body["profile"]["horizon"] == "7" and body["profile"]["crypto"] is False
+    assert app_module.SESSIONS.get_pending(sid) is None
+    # l'historique de l'agent contient la réponse finale, pas le brouillon rejeté
+    assert app_module.SESSIONS.get(sid)["messages"][-1]["content"][0]["text"] == body["reply"]
+    # pas de second appel ensuite
+    env.post("Merci", sid)
+    assert env.engine.invoke.call_count == 1
+
+
+def test_rejected_draft_on_a_non_portfolio_turn_still_returns_needs_review(env):
+    sid = "needs-review-0001"
+    _complete_profile(env, sid)
+    env.monkeypatch.setattr(mh, "reply_guards", lambda *a, **k: [
+        {"name": "percentages_supported_by_inputs_or_tools", "passed": False, "detail": "x"}])
+    body = env.post("Bonjour", sid)
+    assert body["status"] == "needs_review" and env.engine.invoke.call_count == 0 and body["triggered"] is False

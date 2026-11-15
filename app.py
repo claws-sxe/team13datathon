@@ -196,7 +196,10 @@ def process_chat(user_message, state, pending=None):
     if pending and turn - pending["turn"] > bridge.PENDING_MAX_TURNS:
         pending = None  # trop ancienne : l'investisseur n'y répond plus
 
-    if out["status"] == "ok":
+    # needs_review = le brouillon de l'agent a échoué à ses garde-fous, mais le profil de ce tour est bien enregistré
+    # (invalid_* et model_error, eux, n'ont rien modifié). Pour une construction de portefeuille le brouillon est de
+    # toute façon remplacé : on poursuit, et la réponse finale est validée à son tour (_finalize).
+    if out["status"] in ("ok", "needs_review"):
         if intent == "cancel" or (pending and bridge.is_cancel_phrase(user_message)):
             pending = None
         else:
@@ -213,6 +216,7 @@ def _portfolio_turn(body, new_state, prior_state, message, pending):
     # La réponse de l'agent est remplacée : preuves et contrôles ne gardent que ce qui décrit la réponse finale
     # (mises à jour du profil + moteur + contrôle du profil).
     calls = [c for c in _turn_calls(prior_state, new_state) if c["name"] in PROFILE_TOOLS]
+    body["status"] = "ok"  # un brouillon rejeté de l'agent est écarté; _finalize remet needs_review si la réponse finale échoue
     inputs, questions, fields = bridge.engine_inputs(new_state["profile"], new_state["uncertain"])
     if inputs is None:
         text = "Pour construire un portefeuille fictif, il me manque une information :\n- " + "\n- ".join(questions)
