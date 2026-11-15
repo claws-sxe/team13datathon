@@ -281,15 +281,20 @@ def process_chat(user_message, state, pending=None, chat_history=None):
         touched |= {c["input"].get("field") for c in calls
                     if c["name"] in PROFILE_TOOLS and isinstance(c.get("input"), dict)}
         if pending and not cancelled:
-            wants_horizon = "horizon_years" in pending["fields"]
-            exact = bridge.exact_horizon_years(user_message) if wants_horizon else None
-            horizon_ok = isinstance(new_state["profile"].get("horizon_years"), (int, float))
-            if pending.get("confirm") and bridge.is_affirmative(user_message) \
-                    and _confirmation_just_asked(state, pending["confirm"]):
+            confirmed = (pending.get("confirm") and bridge.is_affirmative(user_message)
+                         and _confirmation_just_asked(state, pending["confirm"]))
+            if confirmed:
                 if _set_field(new_state, pending["confirm"]["field"], pending["confirm"]["value"]):
                     touched.add(pending["confirm"]["field"])
-            elif exact is not None and not horizon_ok and _set_field(new_state, "horizon_years", exact):
-                touched.add("horizon_years")  # « Non, plutôt 20 ans » : correction explicite d'un horizon exact
+            elif "horizon_years" in pending["fields"]:
+                # Réponse directe à la question d'horizon en attente : lue par le code, pas seulement par le modèle
+                # (il peut la commenter en prose sans rien enregistrer). La valeur dite est conservée telle quelle.
+                said = bridge.horizon_answer(user_message)
+                current = new_state["profile"].get("horizon_years")
+                exact = isinstance(said, float)
+                if said is not None and not (exact and isinstance(current, (int, float))):
+                    if _set_field(new_state, "horizon_years", said):
+                        touched.add("horizon_years")
         if cancelled:
             pending = None
         else:

@@ -9,6 +9,7 @@
 import copy
 import json
 import os
+import re
 import sys
 from unittest import mock
 
@@ -900,3 +901,108 @@ def test_ctx3_onboarding_only_completes_the_profile_without_an_unsolicited_build
     assert env.engine.invoke.call_count == 1 and body["triggered"] is True
     env.post("Merci", sid)
     assert env.engine.invoke.call_count == 1
+
+
+# ===== EC2 / Bedrock réel : l'agent commente l'horizon en prose, sans enregistrer ni appeler d'outil
+_original_script = script
+
+
+def _prose_only_script(text):
+    t = text.lower()
+    if re.search(r"ans et plus|ans ou plus|au moins \d+ ans|entre \d+ et \d+ ans|^\W*\d+ ans\W*$", t):
+        return [], lambda r: "Merci, j'ai bien noté votre horizon. Quel est votre niveau de risque ?"
+    if "agent_misread" in t:  # variante : l'agent enregistre « 15 ans et plus » comme 15 ans exacts
+        return [("update_profile", {"field": "horizon_years", "value": "15"})], lambda r: "Noté : 15 ans."
+    return _original_script(text)
+
+
+
+@pytest.fixture
+def prose_env(env):
+    env.monkeypatch.setattr(sys.modules[__name__], "script", _prose_only_script)
+    return env
+
+
+def _pending_horizon_session(env, sid):
+    first = env.post("Je veux que vous me fassiez un portefeuille", sid)
+    assert first["route"] == "portfolio_clarification" and env.engine.invoke.call_count == 0
+    return first
+
+
+@pytest.mark.parametrize("answer,value,question,first_label", [
+    ("15 ans et plus", 15, "Voulez-vous utiliser 15 ans pour cette simulation ?", "Oui, 15 ans"),
+    ("au moins 12 ans", 12, "Voulez-vous utiliser 12 ans pour cette simulation ?", "Oui, 12 ans"),
+])
+def test_prose_only_agent_first_and_repeated_range_answers_still_get_the_confirmation_question(
+        prose_env, answer, value, question, first_label):
+    env, sid = prose_env, f"prose-{value}-000000001"
+    _pending_horizon_session(env, sid)
+    for attempt in ("première", "répétée"):
+        before = env.spy.call_count
+        body = env.post(answer, sid)
+        assert env.spy.call_count == before + 1 and env.spy.call_args[0][0] == answer  # l'agent a bien reçu le message
+        assert env.agent_log[-1]["message"] == answer
+        assert body["route"] == "portfolio_clarification", attempt
+        assert question in body["reply"] and "Quel est votre niveau de risque ?" not in body["reply"]
+        assert body["suggestions"][0] == {"label": first_label,
+                                          "message": f"Oui, je confirme un horizon de {value} ans exactement."}
+        assert "ans" in " ".join(c["label"] for c in body["suggestions"]) and not any("et plus" in c["label"] for c in body["suggestions"])
+        # le minimum dit est conservé : jamais remplacé par un nombre exact avant confirmation
+        assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == {"min": float(value), "max": None}
+        assert body["profile"]["horizon"] == f"{value} ou plus"
+        assert env.engine.invoke.call_count == 0
+        assert app_module.SESSIONS.get_pending(sid)["confirm"] == {"field": "horizon_years", "value": value}
+        assert body["checks"]["portfolio_engine"]["called"] is False
+    # l'utilisateur confirme (bouton) : maintenant l'horizon est exact et seul le risque manque
+    body = env.post(f"Oui, je confirme un horizon de {value} ans exactement.", sid)
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == float(value)
+    assert [c["label"] for c in body["suggestions"]] == RISK_CHIPS and env.engine.invoke.call_count == 0
+    env.post(body["suggestions"][1]["message"], sid)
+    assert env.engine.invoke.call_count == 1
+    assert json.loads(env.engine.invoke.call_args.kwargs["Payload"])["parameters"][1] == {
+        "name": "horizon_years", "value": str(value)}
+
+
+def test_prose_only_agent_range_and_exact_answers_are_also_read_by_the_code(prose_env):
+    env = prose_env
+    sid = "prose-range-0000001"
+    _pending_horizon_session(env, sid)
+    body = env.post("entre 8 et 12 ans", sid)
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == {"min": 8.0, "max": 12.0}
+    assert "entre 8 et 12 ans" in body["reply"] and [c["label"] for c in body["suggestions"]] == ["8 ans", "10 ans", "12 ans"]
+    body = env.post("9 ans", sid)  # durée exacte sans outil : enregistrée par le code
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == 9.0
+    assert [c["label"] for c in body["suggestions"]] == RISK_CHIPS and env.engine.invoke.call_count == 0
+
+
+def test_agent_that_records_an_exact_year_for_a_minimum_is_corrected_to_the_stated_minimum(prose_env):
+    env = prose_env
+    sid = "prose-misread-000001"
+    env.monkeypatch.setattr(sys.modules[__name__], "script", lambda text: (
+        ([("update_profile", {"field": "horizon_years", "value": "15"})], lambda r: "Noté : 15 ans.")
+        if "ans et plus" in text.lower() else _original_script(text)))
+    _pending_horizon_session(env, sid)
+    body = env.post("15 ans et plus", sid)
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == {"min": 15.0, "max": None}
+    assert "Voulez-vous utiliser 15 ans pour cette simulation ?" in body["reply"] and env.engine.invoke.call_count == 0
+
+
+def test_unrelated_question_while_horizon_is_pending_gets_its_own_answer(prose_env):
+    env = prose_env
+    sid = "prose-unrelated-0001"
+    _pending_horizon_session(env, sid)
+    env.post("15 ans et plus", sid)
+    for q in ("Parle-moi du Bitcoin", "Pourquoi 15 ans et plus ?"):
+        body = env.post(q, sid)
+        assert body["route"] == "handle_message" and "suggestions" not in body
+        assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == {"min": 15.0, "max": None}
+        assert app_module.SESSIONS.get_pending(sid)["confirm"]["value"] == 15 and env.engine.invoke.call_count == 0
+    assert "Bitcoin" in env.post("Parle-moi du Bitcoin", sid)["reply"]
+    # « Oui » plus tard ne confirme rien : la question de confirmation n'est plus la dernière
+    env.post("oui", sid)
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == {"min": 15.0, "max": None}
+    # sans demande de portefeuille en attente, la même phrase reste l'affaire de l'agent
+    sid2 = "prose-nopending-0001"
+    body = env.post("15 ans et plus", sid2)
+    assert body["route"] == "handle_message" and "horizon_years" not in app_module.SESSIONS.get(sid2)["profile"]
+    assert env.engine.invoke.call_count == 0

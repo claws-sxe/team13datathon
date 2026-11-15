@@ -325,6 +325,42 @@ def is_tolerable_drop_answer(message, last_question):
 
 _EXACT_BLOCK = re.compile(r"\b(?:au moins|au plus|plus de|moins de|jusqu|entre|environ|à peu près|peut-être|ou|"
                           r"et plus|et moins|minimum|maximum|de \d+(?:[.,]\d+)? à)\b|\d\s*-\s*\d|\bà\b", re.I)
+_N = r"(\d+(?:[.,]\d+)?)"
+_YEARS = r"\s*ans?\b"
+_MIN_ONLY = [re.compile(p, re.I) for p in (rf"\b(?:au moins|minimum|au minimum)\s+{_N}{_YEARS}",
+                                           rf"\b{_N}{_YEARS}\s*(?:et plus|ou plus|ou davantage|minimum|\+)")]
+_MAX_ONLY = [re.compile(p, re.I) for p in (rf"\b(?:au plus|jusqu['’]à|au maximum|maximum)\s+{_N}{_YEARS}",
+                                           rf"\b{_N}{_YEARS}\s*(?:maximum|au plus|maxi)\b")]
+_RANGE = [re.compile(p, re.I) for p in (rf"\bentre\s+{_N}\s*(?:ans?\s*)?et\s+{_N}{_YEARS}",
+                                        rf"\bde\s+{_N}\s*(?:ans?\s*)?à\s+{_N}{_YEARS}",
+                                        rf"\b{_N}\s*(?:ans?\s*)?(?:à|-|–)\s*{_N}{_YEARS}")]
+
+
+def _f(x):
+    return float(x.replace(",", "."))
+
+
+def horizon_answer(message):
+    """Horizon donné directement par l'investisseur, lu par le CODE (pas par le modèle) : nombre exact, fourchette
+    {"min","max"}, minimum ou maximum seuls, tel que dit (« 15 ans et plus » -> minimum 15, jamais 15 exact).
+    None si le message n'est pas une réponse courte et sans ambiguïté (question, texte long, plusieurs durées,
+    « plus de », « environ », « peut-être »...)."""
+    if not isinstance(message, str) or is_question(message) or len(message.split()) > 12:
+        return None
+    for rx in _RANGE:
+        m = rx.search(message)
+        if m:
+            lo, hi = _f(m.group(1)), _f(m.group(2))
+            return {"min": lo, "max": hi} if lo < hi else None
+    for rx in _MIN_ONLY:
+        m = rx.search(message)
+        if m:
+            return {"min": _f(m.group(1)), "max": None}
+    for rx in _MAX_ONLY:
+        m = rx.search(message)
+        if m:
+            return {"min": None, "max": _f(m.group(1))}
+    return exact_horizon_years(message)
 
 
 def exact_horizon_years(message):
