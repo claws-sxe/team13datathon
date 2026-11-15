@@ -33,7 +33,8 @@ export default function Chat({ messages, loading, error, onSend, suggestions = [
         {!loading && suggestions.length > 0 && (
           <div className="chips">
             {suggestions.map((s) => (
-              <button key={s} className="chip" onClick={() => onSend(s)}>{s}</button>
+              // libellé court affiché, message complet envoyé
+              <button key={s.label} className="chip" onClick={() => onSend(s.message)}>{s.label}</button>
             ))}
           </div>
         )}
