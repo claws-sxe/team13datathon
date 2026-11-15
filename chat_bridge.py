@@ -77,7 +77,7 @@ _BUILD_VERB = re.compile(r"\b(construi\w*|cré(?:e|er|ez|ons)|creer|génér\w+|g
                          r"compose\w*|proposer|propose\w*|prépar\w+|prepar\w+|élabor\w+|elabor\w+|"
                          r"établi\w*|etabli\w*)\b", re.I)
 # « Je veux un portefeuille fictif », « donne-moi un portefeuille » : « un/une/ce » exclut l'analyse de « mon portefeuille ».
-_REQUEST = re.compile(rf"\b(veux|voudrais|souhait\w*|aimerais|désir\w*|donne\w*|fais|montre\w*)\b[^.!?]{{0,40}}?"
+_REQUEST = re.compile(rf"\b(veux|voudrais|souhait\w*|aimerais|désir\w*|donne\w*|fais|faire|faites|fass\w+|montre\w*)\b[^.!?]{{0,40}}?"
                       rf"\b(?:un|une|ce)\s+(?:nouveau\s+)?(?:{_PORTFOLIO})\b", re.I)
 _PORTFOLIO_RE = re.compile(rf"\b(?:{_PORTFOLIO})\b", re.I)
 _EDUCATIONAL = re.compile(r"\b(comment|pourquoi|qu['’]est[- ]ce|c['’]est quoi|que signifie|définition|définis|"
@@ -146,52 +146,196 @@ def wants_portfolio_build(message):
 # ------------------------------------------------------ entrées du moteur
 _ENGINE_RISK = {"low": "low", "medium": "medium", "high": "high"}
 _RISK_FR = {"low": "faible", "medium": "modéré", "high": "élevé"}
+# Choix proposés : libellé court affiché, message complet envoyé (le coach comprend ce que la réponse désigne).
+RISK_CHOICES = [{"label": "Faible", "message": "Je confirme une tolérance au risque faible."},
+                {"label": "Modéré", "message": "Je confirme une tolérance au risque modérée."},
+                {"label": "Élevé", "message": "Je confirme une tolérance au risque élevée."}]
+HORIZON_STEPS = (1, 3, 5, 7, 10, 15, 20, 25, 30)
+DEFAULT_HORIZONS = (3, 5, 10, 15)
+RISK_QUESTION = "Quel niveau de risque choisissez-vous : Faible, Modéré ou Élevé ?"
 
 
 def _num(v):
     return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
 
 
+def _years(n):
+    return str(int(n)) if float(n).is_integer() else str(n)
+
+
+def horizon_choice(n):
+    return {"label": f"{_years(n)} ans", "message": f"Je confirme un horizon de {_years(n)} ans exactement."}
+
+
+def _horizon_choices(lo=None, hi=None, candidates=()):
+    """Choix d'années EXACTES (jamais « et plus ») compatibles avec les bornes déjà données."""
+    if candidates:
+        years = list(dict.fromkeys(candidates))
+    elif lo is None and hi is None:
+        years = list(DEFAULT_HORIZONS)
+    else:
+        pool = [n for n in HORIZON_STEPS if (lo is None or n >= lo) and (hi is None or n <= hi)]
+        for edge in (lo, hi):
+            if edge is not None and float(edge).is_integer() and int(edge) not in pool:
+                pool.append(int(edge))
+        years = sorted(pool)
+        if len(years) > 4:  # au plus 4 choix : bornes et valeurs intermédiaires espacées
+            years = sorted({years[0], years[-1], years[len(years) // 3], years[2 * len(years) // 3]})
+    return [horizon_choice(n) for n in years[:5]]
+
+
+def _candidate_years(uncertain_field):
+    out = []
+    for c in (uncertain_field or {}).get("candidates") or []:
+        m = re.search(r"\d+(?:[.,]\d+)?", str(c))
+        if m:
+            out.append(float(m.group().replace(",", ".")))
+    return out
+
+
 def engine_inputs(profile, uncertain):
     """Entrées de PortfolioEngine tirées du profil CONFIRMÉ de l'agent.
 
-    Retourne (entrées | None, questions, champs concernés). Rien n'est deviné : un champ absent, à clarifier ou donné en fourchette (que
-    le moteur ne sait pas lire) devient une question."""
+    Retourne (entrées | None, questions, champs concernés, extras). `extras` = {"suggestions": choix à afficher pour
+    la première question, "confirm": valeur proposée à confirmer | None}. Rien n'est deviné : un champ absent, à
+    clarifier ou donné en fourchette (que le moteur ne sait pas lire) devient une question, jamais une valeur
+    choisie en silence. L'horizon est demandé avant le risque."""
     questions, fields = [], []
-    risk = profile.get("risk_tolerance")
-    if not (isinstance(risk, str) and risk in _ENGINE_RISK and "risk_tolerance" not in uncertain):
-        fields.append("risk_tolerance")
-    if "risk_tolerance" in uncertain:
-        cands = ", ".join(str(c) for c in uncertain["risk_tolerance"].get("candidates") or [])
-        questions.append("Votre niveau de risque est à clarifier" + (f" ({cands})" if cands else "")
-                         + " : faible, modéré ou élevé ?")
-    elif risk is None:
-        questions.append("Quel niveau de risque acceptez-vous : faible, modéré ou élevé ?")
-    elif isinstance(risk, dict):
-        lo, hi = _RISK_FR.get(risk.get("min")), _RISK_FR.get(risk.get("max"))
-        questions.append(f"Vous avez indiqué un risque entre {lo} et {hi}. Le moteur de portefeuille attend une seule "
-                         "valeur : faible, modéré ou élevé, laquelle retenez-vous ?")
-    elif not (isinstance(risk, str) and risk in _ENGINE_RISK):
-        questions.append("Quel niveau de risque acceptez-vous : faible, modéré ou élevé ?")
+    extras = {"suggestions": [], "confirm": None}
+
+    def ask(field, question, choices):
+        fields.append(field)
+        questions.append(question)
+        if not extras["suggestions"]:
+            extras["suggestions"] = choices
 
     horizon = profile.get("horizon_years")
-    if not (_num(horizon) is not None and horizon > 0 and "horizon_years" not in uncertain):
-        fields.append("horizon_years")
     if "horizon_years" in uncertain:
         cands = ", ".join(str(c) for c in uncertain["horizon_years"].get("candidates") or [])
-        questions.append("Votre horizon de placement est à clarifier" + (f" ({cands} ans)" if cands else "")
-                         + " : combien d'années retenez-vous ?")
+        ask("horizon_years", "Votre horizon de placement est à clarifier" + (f" ({cands} ans)" if cands else "")
+            + " : quel nombre d'années précis retenez-vous ?",
+            _horizon_choices(candidates=_candidate_years(uncertain["horizon_years"])))
     elif horizon is None:
-        questions.append("Quel est votre horizon de placement, en années ?")
+        ask("horizon_years", "Quel est votre horizon de placement ? Le moteur a besoin d'un nombre d'années précis.",
+            _horizon_choices())
     elif isinstance(horizon, dict):
-        questions.append("Vous avez indiqué un horizon sous forme de fourchette. Le moteur de portefeuille attend un "
-                         "nombre d'années précis : lequel retenez-vous ?")
+        lo, hi = horizon.get("min"), horizon.get("max")
+        if hi is None and lo is not None and float(lo).is_integer():
+            n = int(lo)
+            extras["confirm"] = {"field": "horizon_years", "value": n}
+            more = [horizon_choice(x) for x in HORIZON_STEPS if x > n][:3]
+            ask("horizon_years", f"Vous avez indiqué un horizon de {n} ans ou plus. Le moteur a besoin d'un nombre "
+                f"d'années précis. Voulez-vous utiliser {n} ans pour cette simulation ?",
+                [{"label": f"Oui, {n} ans", "message": f"Oui, je confirme un horizon de {n} ans exactement."}] + more)
+        else:
+            if lo is not None and hi is not None:
+                span = f"entre {_years(lo)} et {_years(hi)} ans"
+            elif hi is not None:
+                span = f"d'au plus {_years(hi)} ans"
+            else:
+                span = f"d'au moins {_years(lo)} ans"
+            ask("horizon_years", f"Vous avez indiqué un horizon {span}. Le moteur a besoin d'un nombre d'années "
+                "précis : lequel retenez-vous ?", _horizon_choices(lo, hi))
     elif _num(horizon) is None or horizon <= 0:
-        questions.append("Quel est votre horizon de placement, en années ?")
+        ask("horizon_years", "Quel est votre horizon de placement ? Le moteur a besoin d'un nombre d'années précis.",
+            _horizon_choices())
+
+    risk = profile.get("risk_tolerance")
+    if "risk_tolerance" in uncertain:
+        cands = ", ".join(str(c) for c in uncertain["risk_tolerance"].get("candidates") or [])
+        ask("risk_tolerance", "Votre niveau de risque est à clarifier" + (f" ({cands})" if cands else "")
+            + " : Faible, Modéré ou Élevé ?", RISK_CHOICES)
+    elif risk is None:
+        ask("risk_tolerance", RISK_QUESTION, RISK_CHOICES)
+    elif isinstance(risk, dict):
+        lo, hi = _RISK_FR.get(risk.get("min")), _RISK_FR.get(risk.get("max"))
+        ask("risk_tolerance", f"Vous avez indiqué un risque entre {lo} et {hi}. Le moteur de portefeuille attend une "
+            "seule valeur : Faible, Modéré ou Élevé, laquelle retenez-vous ?", RISK_CHOICES)
+    elif not (isinstance(risk, str) and risk in _ENGINE_RISK):
+        ask("risk_tolerance", RISK_QUESTION, RISK_CHOICES)
 
     if questions:
-        return None, questions, fields
-    return {"risk_profile": _ENGINE_RISK[risk], "horizon_years": int(round(horizon))}, [], []
+        return None, questions, fields, extras
+    return {"risk_profile": _ENGINE_RISK[risk], "horizon_years": int(round(horizon))}, [], [], extras
+
+
+_AFFIRMATIVE = re.compile(r"^\s*(?:oui|ok|d['’]accord|exact(?:ement)?|bien sûr|volontiers|parfait|c['’]est bon)\b", re.I)
+
+
+def is_affirmative(message):
+    """« Oui », « Oui, 15 ans » : accord court. Une phrase qui commence par « non » ou « oui mais » n'en est pas un."""
+    return (isinstance(message, str) and bool(_AFFIRMATIVE.search(message))
+            and not re.search(r"\b(?:mais|non|plutôt|autre)\b", message, re.I))
+
+
+# ----------------------------- interprétation d'une réponse selon la question posée
+_PERCENT = re.compile(r"(?:(?:environ|à peu près|autour de|près de|jusqu['’]à|au maximum|maximum)\s+)?"
+                      r"\d+(?:[.,]\d+)?\s*(?:%|pour\s*cent)", re.I)
+_RISK_WORD = re.compile(r"\b(faibles?|bas(?:se)?|modér\w*|moder\w*|moyen\w*|élev\w*|elev\w*|haut(?:e)?|prudent\w*|"
+                        r"conservat\w*|agressi\w*|audac\w*|risqu\w*|dynamique|sécuritaire|low|medium|high)\b", re.I)
+_INTERROGATIVE = re.compile(r"^\s*(?:pourquoi|comment|quel\w*|est[- ]ce|combien|que\b|qu['’]|où|quand|peux-tu|pouvez-vous|"
+                            r"explique\w*)", re.I)
+# « Je pourrais supporter une baisse… », « j'accepterais de perdre jusqu'à… » : l'investisseur parle de lui-même
+_SELF_DROP = re.compile(r"\b(?:je|j['’])\s*(?:\w+\s+){0,3}(?:pourrai\w*|peux|puis|accepte\w*|tolér\w+|supporte\w*|"
+                        r"encaisse\w*)\b[^.?!]*\b(?:baisse|perte|perdre|moins)\b", re.I)
+
+
+_THIRD_PERSON = re.compile(r"\b(?:a|ont|avait|avaient)\s+(?:perdu|baissé|chuté|gagné|reculé|plongé)\b", re.I)
+
+
+def is_question(message):
+    return isinstance(message, str) and ("?" in message or bool(_INTERROGATIVE.search(message)))
+
+
+def percent_without_risk_category(message):
+    """Le message donne un pourcentage mais aucune catégorie de risque : le risque ne doit pas en être déduit.
+    Retourne le pourcentage tel que dit (« environ 25 % ») ou None."""
+    if not isinstance(message, str) or _RISK_WORD.search(message):
+        return None
+    m = _PERCENT.search(message)
+    return re.sub(r"\s+", " ", m.group()).strip() if m else None
+
+
+def question_kind(text):
+    """Ce que demandait la dernière question du coach : "loss" (baisse supportable), "horizon", "risk" ou None."""
+    if not isinstance(text, str) or "?" not in text:
+        return None
+    q = [x for x in re.split(r"(?<=[.!?])\s+", text) if "?" in x][-1].lower()
+    if re.search(r"niveau de risque|catégorie de risque|faible,? modéré (?:ou|et) élevé", q):
+        return "risk"
+    if re.search(r"horizon|combien d['’]années|dans combien|durée|années", q):
+        return "horizon"
+    if re.search(r"baisse|baissait|perdre|perte", q) and re.search(r"supporter|tolérer|accepter|sans vendre", q):
+        return "loss"
+    return None
+
+
+def is_tolerable_drop_answer(message, last_question):
+    """Vrai si le pourcentage est une baisse que l'investisseur dit pouvoir supporter : il le dit lui-même
+    (« je pourrais supporter une baisse de… ») ou il répond brièvement juste après la question sur la baisse
+    supportable. Une question (« Pourquoi Tesla a perdu 25 % ? ») ou un constat sur un titre n'en est jamais une."""
+    if not percent_without_risk_category(message) or is_question(message):
+        return False
+    if _SELF_DROP.search(message):
+        return True
+    if _THIRD_PERSON.search(message):  # « Tesla a perdu 25 % » : un constat sur un titre
+        return False
+    return question_kind(last_question) == "loss" and len(message.split()) <= 8
+
+
+_EXACT_BLOCK = re.compile(r"\b(?:au moins|au plus|plus de|moins de|jusqu|entre|environ|à peu près|peut-être|ou|"
+                          r"et plus|et moins|minimum|maximum|de \d+(?:[.,]\d+)? à)\b|\d\s*-\s*\d|\bà\b", re.I)
+
+
+def exact_horizon_years(message):
+    """Nombre d'années EXACT donné sans réserve (« plutôt 20 ans », « 9 ans »), sinon None. Fourchettes, minimums,
+    maximums, estimations et questions sont écartés : ils restent tels que dits."""
+    if not isinstance(message, str) or is_question(message) or _EXACT_BLOCK.search(message):
+        return None
+    found = re.findall(r"(\d+(?:[.,]\d+)?)\s*ans?\b", message, re.I)
+    if len(set(found)) != 1:
+        return None
+    return float(found[0].replace(",", "."))
 
 
 # ---------------------------------------------------------- profil du site

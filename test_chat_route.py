@@ -65,7 +65,43 @@ class FakeAgent:
 
 
 def script(text):
+    import re
     t = text.lower()
+    if "pourquoi tesla a perdu 25 %" in t:  # agent défaillant : déduit un risque d'un pourcentage sur Tesla
+        return [("update_profile", {"field": "risk_tolerance", "value": "high", "explicit_correction": True})], \
+            lambda r: "Je ne dispose que des prix, pas des causes d'un mouvement."
+    if "environ 25 %" in t:  # agent défaillant : convertit en silence une réponse « environ 25 % » en risque
+        return [("update_profile", {"field": "risk_tolerance", "value": "medium"})], lambda r: "Noté : risque modéré."
+    if "au moins 12 ans" in t:
+        return [("update_profile", {"field": "horizon_years", "value": "12 ans ou plus"})], lambda r: "Je note votre horizon."
+    if "entre 8 et 12 ans" in t:
+        return [("update_profile", {"field": "horizon_years", "value": "8-12"})], lambda r: "Je note votre horizon."
+    if "9 ans et risque élevé" in t:
+        return [("update_profile", {"field": "horizon_years", "value": "9"}),
+                ("update_profile", {"field": "risk_tolerance", "value": "high"})], lambda r: "Noté."
+    m = re.search(r"horizon de placement est de (\d+) ans\.", t)
+    if m and "et plus" not in t:
+        return [("update_profile", {"field": "horizon_years", "value": m.group(1)})], lambda r: "Noté."
+    m = re.search(r"baisse temporaire de (\d+) %", t)
+    if m:  # agent défaillant : convertit en silence le pourcentage en catégorie de risque (le serveur doit le refuser)
+        level = {"10": "low", "20": "medium", "35": "high"}[m.group(1)]
+        return [("update_profile", {"field": "risk_tolerance", "value": level})], lambda r: "Noté : votre risque est " + level + "."
+    if "horizon de 15 ans exactement et un risque modéré" in t:
+        return [("update_profile", {"field": "horizon_years", "value": "15", "explicit_correction": True}),
+                ("update_profile", {"field": "risk_tolerance", "value": "medium", "explicit_correction": True})], \
+            lambda r: "Noté : 15 ans, risque modéré."
+    m = re.search(r"je confirme un horizon de (\d+) ans exactement", t)
+    if m:
+        return [("update_profile", {"field": "horizon_years", "value": m.group(1), "explicit_correction": True})], \
+            lambda r: f"Noté : horizon de {m.group(1)} ans."
+    m = re.search(r"je confirme une tolérance au risque (faible|modérée|élevée)", t)
+    if m and m.group(1) != "faible":
+        level = {"modérée": "medium", "élevée": "high"}[m.group(1)]
+        return [("update_profile", {"field": "risk_tolerance", "value": level, "explicit_correction": True})], \
+            lambda r: f"Noté : risque {m.group(1)}."
+    if "15 ans et plus" in t:
+        return [("update_profile", {"field": "horizon_years", "value": "15 ans ou plus"})], \
+            lambda r: "Je ne peux pas construire de portefeuille, mais je note votre horizon."  # ancien comportement fautif
     if "sans crypto" in t:  # profil dit en même temps que la demande, risque en fourchette
         return [("update_profile", {"field": "crypto_preference", "value": "exclude"}),
                 ("update_profile", {"field": "horizon_years", "value": "7"}),
@@ -540,3 +576,327 @@ def test_rejected_draft_on_a_non_portfolio_turn_still_returns_needs_review(env):
         {"name": "percentages_supported_by_inputs_or_tools", "passed": False, "detail": "x"}])
     body = env.post("Bonjour", sid)
     assert body["status"] == "needs_review" and env.engine.invoke.call_count == 0 and body["triggered"] is False
+
+
+# ===================== onboarding en français et portefeuille simulé : les deux conversations signalées
+DROP_MESSAGES = {p: f"Je pourrais supporter une baisse temporaire de {p} % sans vendre." for p in (10, 20, 35)}
+RISK_CHIPS = ["Faible", "Modéré", "Élevé"]
+
+
+@pytest.mark.parametrize("pct", [10, 20, 35])
+def test_conv1_opening_button_is_understood_and_never_becomes_a_risk_category(env, pct):
+    sid = f"onboarding-{pct:02d}-0001"
+    body = env.post(DROP_MESSAGES[pct], sid)
+    assert env.spy.call_args[0][0] == DROP_MESSAGES[pct]  # message complet, pas « 35 % » seul
+    assert body["profile"]["risk"] is None  # l'agent avait enregistré un risque : le serveur l'a refusé
+    state = app_module.SESSIONS.get(sid)
+    assert "risk_tolerance" not in state["profile"] and "risk_tolerance" not in state["uncertain"]
+    assert not any(e.get("field") == "risk_tolerance" for e in state["changes"])
+    assert body["checks"]["risk_from_percentage"] == {"corrected": True, "percentage": f"{pct} %"}
+    assert f"baisse temporaire de {pct} %" in body["reply"] and "Faible, Modéré ou Élevé" in body["reply"]
+    assert "Je ne la convertis pas" in body["reply"] and body["route"] == "risk_category_clarification"
+    assert [c["label"] for c in body["suggestions"]] == RISK_CHIPS
+    assert all(g["passed"] for g in body["checks"]["reply_guards"])
+    assert env.engine.invoke.call_count == 0
+
+
+def test_conv1_user_chooses_category_then_horizon_then_engine_runs_once(env):
+    sid = "onboarding-flow-0001"
+    env.post(DROP_MESSAGES[35], sid)
+    first = env.post("Je veux que vous me fassiez un portefeuille", sid)
+    assert first["route"] == "portfolio_clarification" and env.engine.invoke.call_count == 0
+    assert "niveau de risque" in first["reply"] and "Faible, Modéré ou Élevé" in first["reply"]
+    chip = next(c for c in app_module.bridge.RISK_CHOICES if c["label"] == "Modéré")
+    second = env.post(chip["message"], sid)
+    assert env.engine.invoke.call_count == 0 and "horizon" in second["reply"]
+    assert [c["label"] for c in second["suggestions"]] == ["3 ans", "5 ans", "10 ans", "15 ans"]  # années exactes
+    body = env.post(second["suggestions"][2]["message"], sid)  # « 10 ans »
+    assert env.engine.invoke.call_count == 1 and body["triggered"] is True
+    assert json.loads(env.engine.invoke.call_args.kwargs["Payload"])["parameters"] == [
+        {"name": "risk_profile", "value": "medium"}, {"name": "horizon_years", "value": "10"}]
+
+
+def test_conv2_repeated_ambiguous_horizon_keeps_request_pending_and_asks_to_confirm_15(env):
+    sid = "conv2-15ans-00001"
+    first = env.post("Je veux que vous me fassiez un portefeuille", sid)  # une seule demande de portefeuille
+    assert first["route"] == "portfolio_clarification" and env.engine.invoke.call_count == 0
+    assert [c["label"] for c in first["suggestions"]] == ["3 ans", "5 ans", "10 ans", "15 ans"]
+    assert not any("et plus" in c["label"] for c in first["suggestions"])
+
+    for attempt in (1, 2):  # « 15 ans et plus », puis la même réponse répétée
+        body = env.post("15 ans et plus", sid)
+        assert body["route"] == "portfolio_clarification", attempt
+        assert "Voulez-vous utiliser 15 ans pour cette simulation ?" in body["reply"]
+        assert "ne peux pas construire" not in body["reply"] and env.engine.invoke.call_count == 0
+        assert body["suggestions"][0] == {"label": "Oui, 15 ans",
+                                          "message": "Oui, je confirme un horizon de 15 ans exactement."}
+        pending = app_module.SESSIONS.get_pending(sid)
+        assert pending["confirm"] == {"field": "horizon_years", "value": 15}
+        # 15 n'est PAS retenu avant confirmation : l'horizon reste la fourchette « 15 ans ou plus »
+        assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == {"min": 15.0, "max": None}
+        assert body["profile"]["horizon"] == "15 ou plus"
+
+    body = env.post("Oui, je confirme un horizon de 15 ans exactement.", sid)  # confirmation (bouton « Oui, 15 ans »)
+    assert env.engine.invoke.call_count == 0 and "niveau de risque" in body["reply"]
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == 15.0
+    assert [c["label"] for c in body["suggestions"]] == RISK_CHIPS
+    final = env.post(body["suggestions"][1]["message"], sid)  # « Modéré » : dernier champ manquant
+    assert env.engine.invoke.call_count == 1  # exactement une fois, sans redemander le portefeuille
+    assert json.loads(env.engine.invoke.call_args.kwargs["Payload"])["parameters"] == [
+        {"name": "risk_profile", "value": "medium"}, {"name": "horizon_years", "value": "15"}]
+    assert final["triggered"] is True and final["status"] == "ok" and final["portfolio"] == ENGINE_WITH_AGG
+    for t, w in (("AGG", "40,00 %"), ("GLD", "30,00 %"), ("XIU.TO", "30,00 %")):
+        assert f"- {t} : {w}" in final["reply"]
+    assert all(g["passed"] for g in final["checks"]["reply_guards"])
+    assert final["checks"]["engine_portfolio_review"]["check_status"] == "checked"
+    assert app_module.SESSIONS.get_pending(sid) is None
+    asked = [c.args[0] for c in env.spy.call_args_list]
+    assert asked.count("Je veux que vous me fassiez un portefeuille") == 1
+    env.post("Merci", sid)
+    assert env.engine.invoke.call_count == 1
+
+
+def test_conv2_bare_yes_confirms_the_proposed_15_years_even_if_the_agent_ignores_it(env):
+    sid = "conv2-bare-yes-001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid)
+    env.post("15 ans et plus", sid)
+    body = env.post("Oui", sid)  # l'agent factice ne fait rien : l'application enregistre 15 ans
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == 15.0
+    assert env.engine.invoke.call_count == 0 and "niveau de risque" in body["reply"]
+
+
+def test_conv2_user_can_decline_the_proposed_15_years(env):
+    sid = "conv2-decline-0001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid)
+    env.post("15 ans et plus", sid)
+    env.post("Non, merci", sid)  # un refus sans autre durée ne confirme rien à la place de l'utilisateur
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == {"min": 15.0, "max": None}
+    assert env.engine.invoke.call_count == 0
+
+
+def test_conv2_working_single_message_confirmation_still_runs_engine_once(env):
+    """Comportement qui fonctionnait en production : horizon exact et risque dans un seul message."""
+    sid = "conv2-working-0001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid)
+    env.post("15 ans et plus", sid)
+    env.post("15 ans et plus", sid)
+    body = env.post("Je confirme un horizon de 15 ans exactement et un risque modéré", sid)
+    assert env.engine.invoke.call_count == 1 and body["triggered"] is True
+    assert body["portfolio"] == ENGINE_WITH_AGG and body["profile"]["horizon"] == "15" and body["profile"]["risk"] == "modéré"
+    assert [c.args[0] for c in env.spy.call_args_list].count("Je veux que vous me fassiez un portefeuille") == 1
+
+
+def test_conv2_pending_survives_unrelated_question_and_is_cleared_by_cancel_or_reset(env):
+    sid = "conv2-keep-000001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid)
+    env.post("15 ans et plus", sid)
+    body = env.post("Parle-moi du Bitcoin", sid)
+    assert body["route"] == "handle_message" and env.engine.invoke.call_count == 0
+    assert app_module.SESSIONS.get_pending(sid)["confirm"]["value"] == 15  # toujours en attente
+    env.post("Finalement non, laisse tomber", sid)
+    assert app_module.SESSIONS.get_pending(sid) is None
+    env.post("Oui", sid)
+    assert env.engine.invoke.call_count == 0
+    # Recommencer
+    sid2 = "conv2-reset-000001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid2)
+    env.post("15 ans et plus", sid2)
+    env.post("Oui", sid2, reset=True)
+    assert app_module.SESSIONS.get_pending(sid2) is None and env.engine.invoke.call_count == 0
+
+
+def test_exact_year_choices_never_offer_open_ended_answers():
+    b = app_module.bridge
+    assert [c["label"] for c in b.engine_inputs({}, {})[3]["suggestions"]] == ["3 ans", "5 ans", "10 ans", "15 ans"]
+    rng = b.engine_inputs({"horizon_years": {"min": 3.0, "max": 5.0}, "risk_tolerance": "low"}, {})
+    assert "entre 3 et 5 ans" in rng[1][0] and [c["label"] for c in rng[3]["suggestions"]] == ["3 ans", "5 ans"]
+    assert rng[3]["confirm"] is None
+    for _, q, _, extras in (b.engine_inputs(p, {}) for p in ({}, {"horizon_years": {"min": 15.0, "max": None}})):
+        assert all("et plus" not in c["label"] and "ou plus" not in c["message"] for c in extras["suggestions"])
+
+
+def test_capability_wording_says_the_app_can_build_a_simulated_portfolio():
+    p = ag.CHAT_SYSTEM_PROMPT
+    assert "construire un portefeuille FICTIF de simulation" in p and "son moteur de portefeuille" in p
+    assert "ne réponds jamais que l'application ne peut pas en construire" in p
+    assert "jamais toi, qui choisit les actifs et les poids" in p and "aucun « 60 % / 40 % »" in p  # garde-fou conservé
+    assert "n'est PAS une catégorie de risque" in p and "« 15 ans et plus » se conserve comme fourchette" in p
+    assert "Elle ne construit pas d'allocation" not in p
+
+
+# ============ revue des hypothèses : mêmes comportements avec d'autres mots et d'autres nombres
+WELCOME_Q = ("Bonjour ! Je suis un coach d'investissement en simulation.\n\nPour commencer : si votre portefeuille baissait "
+             "temporairement, quelle baisse pourriez-vous supporter sans vendre ?")
+HORIZON_Q = "Quel est votre horizon de placement, en années ?"
+
+
+def post_after(env, sid, message, coach_text, **extra):
+    """Message envoyé par le site avec le dernier message du coach dans chat_history (comme api.js)."""
+    r = env.client.post("/api/chat", json={"user_message": message, "session_id": sid, "chat_history": [
+        {"role": "assistant", "content": coach_text}], **extra})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def risk_of(sid):
+    return app_module.SESSIONS.get(sid)["profile"].get("risk_tolerance")
+
+
+def test_ctx1_typed_percentage_after_the_opening_question_is_a_tolerable_drop(env):
+    sid = "ctx-typed-0000001"
+    body = post_after(env, sid, "environ 25 %", WELCOME_Q)
+    sent = env.spy.call_args[0][0]
+    assert "quelle baisse pourriez-vous supporter sans vendre" in sent and sent.endswith("environ 25 %")  # contexte donné
+    assert risk_of(sid) is None and body["profile"]["risk"] is None  # l'agent l'avait converti : refusé
+    assert body["route"] == "risk_category_clarification"
+    assert "baisse temporaire sans vendre (environ 25 %)" in body["reply"] and "Faible, Modéré ou Élevé" in body["reply"]
+    assert [c["label"] for c in body["suggestions"]] == RISK_CHIPS and all(g["passed"] for g in body["checks"]["reply_guards"])
+    assert env.engine.invoke.call_count == 0
+
+
+def test_ctx1_same_text_after_another_question_is_not_read_as_a_drop(env):
+    sid = "ctx-horizon-00001"
+    body = post_after(env, sid, "environ 25 %", HORIZON_Q)
+    assert risk_of(sid) is None  # jamais une catégorie de risque
+    assert body["route"] == "handle_message" and "suggestions" not in body
+    assert "baisse temporaire" not in body["reply"]
+
+
+def test_ctx1_later_tesla_question_leaves_the_risk_profile_unchanged(env):
+    sid = "ctx-tesla-0000001"
+    env.post("Je confirme une tolérance au risque modérée.", sid)
+    assert risk_of(sid) == "medium"
+    body = env.post("Pourquoi Tesla a perdu 25 % ?", sid)
+    assert risk_of(sid) == "medium" and body["profile"]["risk"] == "modéré"
+    assert body["route"] == "handle_message" and body["checks"]["risk_from_percentage"]["corrected"] is True
+    assert "baisse temporaire" not in body["reply"]
+    # même question juste après la question d'ouverture : une question n'est pas une réponse
+    sid2 = "ctx-tesla-0000002"
+    body = post_after(env, sid2, "Pourquoi Tesla a perdu 25 % ?", WELCOME_Q)
+    assert risk_of(sid2) is None and body["route"] == "handle_message" and "baisse temporaire" not in body["reply"]
+
+
+def test_ctx1_a_percentage_never_assigns_a_category_with_other_wording(env):
+    for i, msg in enumerate(["J'accepterais de perdre jusqu'à 18 %", "Je pourrais supporter une baisse temporaire de 12,5 % sans vendre."]):
+        sid = f"ctx-wording-0000{i}"
+        body = env.post(msg, sid)
+        assert risk_of(sid) is None and body["profile"]["risk"] is None
+
+
+@pytest.mark.parametrize("answer,saved,question,labels", [
+    ("au moins 12 ans", {"min": 12.0, "max": None}, "Voulez-vous utiliser 12 ans pour cette simulation ?",
+     ["Oui, 12 ans", "15 ans", "20 ans", "25 ans"]),
+    ("entre 8 et 12 ans", {"min": 8.0, "max": 12.0}, "entre 8 et 12 ans", ["8 ans", "10 ans", "12 ans"]),
+])
+def test_ctx2_horizons_outside_the_presets_are_kept_as_said(env, answer, saved, question, labels):
+    sid = "hor-" + answer.replace(" ", "")[:10] + "-001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid)
+    body = env.post(answer, sid)
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == saved  # conservé tel que dit
+    assert question in body["reply"] and [c["label"] for c in body["suggestions"]] == labels
+    assert env.engine.invoke.call_count == 0 and app_module.SESSIONS.get_pending(sid) is not None
+
+
+def test_ctx2_bare_yes_confirms_12_years_then_only_the_risk_is_missing(env):
+    sid = "hor-yes-12-000001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid)
+    env.post("au moins 12 ans", sid)
+    body = env.post("oui", sid)
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == 12.0
+    assert [c["label"] for c in body["suggestions"]] == RISK_CHIPS and "horizon" not in body["reply"].lower().replace("horizon de", "")
+    env.post("Je confirme une tolérance au risque élevée.", sid)
+    assert env.engine.invoke.call_count == 1
+    assert json.loads(env.engine.invoke.call_args.kwargs["Payload"])["parameters"] == [
+        {"name": "risk_profile", "value": "high"}, {"name": "horizon_years", "value": "12"}]
+
+
+def test_ctx2_range_then_choice_chip_gives_an_exact_year(env):
+    sid = "hor-range-chip-001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid)
+    body = env.post("entre 8 et 12 ans", sid)
+    body = env.post(body["suggestions"][1]["message"], sid)  # « 10 ans »
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == 10.0 and body["profile"]["horizon"] == "10"
+
+
+def test_ctx2_explicit_correction_after_proposed_15_is_accepted(env):
+    sid = "hor-correction-001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid)
+    env.post("15 ans et plus", sid)
+    body = env.post("Non, plutôt 20 ans", sid)
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == 20.0 and body["profile"]["horizon"] == "20"
+    assert [c["label"] for c in body["suggestions"]] == RISK_CHIPS  # seul le risque manque encore
+    env.post("Je confirme une tolérance au risque modérée.", sid)
+    assert env.engine.invoke.call_count == 1
+    assert json.loads(env.engine.invoke.call_args.kwargs["Payload"])["parameters"][1] == {"name": "horizon_years", "value": "20"}
+
+
+def test_ctx2_bare_yes_that_answers_something_else_confirms_nothing(env):
+    sid = "hor-yes-other-0001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid)
+    env.post("au moins 12 ans", sid)
+    env.post("Parle-moi du Bitcoin", sid)  # la question de confirmation n'est plus la dernière
+    env.post("oui", sid)
+    assert app_module.SESSIONS.get(sid)["profile"]["horizon_years"] == {"min": 12.0, "max": None}
+    sid2 = "hor-yes-none-00001"
+    env.post("Bonjour", sid2)
+    env.post("oui", sid2)
+    assert "horizon_years" not in app_module.SESSIONS.get(sid2)["profile"] and env.engine.invoke.call_count == 0
+
+
+def test_ctx3_horizon_then_risk_with_numbers_outside_the_presets(env):
+    sid = "flow-hor-risk-0001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid)
+    env.post("Je confirme un horizon de 9 ans exactement.", sid)
+    assert env.engine.invoke.call_count == 0
+    env.post("Je confirme une tolérance au risque élevée.", sid)
+    assert env.engine.invoke.call_count == 1
+    assert json.loads(env.engine.invoke.call_args.kwargs["Payload"])["parameters"] == [
+        {"name": "risk_profile", "value": "high"}, {"name": "horizon_years", "value": "9"}]
+    env.post("Merci beaucoup", sid)
+    env.post("Parle-moi du Bitcoin", sid)
+    assert env.engine.invoke.call_count == 1  # pas de seconde construction
+
+
+def test_ctx3_risk_then_horizon_and_both_in_one_message(env):
+    sid = "flow-risk-hor-0001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid)
+    body = env.post("Je confirme une tolérance au risque modérée.", sid)
+    assert env.engine.invoke.call_count == 0 and "horizon" in body["reply"]  # seul l'horizon manque
+    assert [c["label"] for c in body["suggestions"]] == ["3 ans", "5 ans", "10 ans", "15 ans"]
+    env.post("Je confirme un horizon de 7 ans exactement.", sid)
+    assert env.engine.invoke.call_count == 1
+    sid2 = "flow-both-one-0001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid2)
+    assert env.engine.invoke.call_count == 1
+    env.post("9 ans et risque élevé", sid2)
+    assert env.engine.invoke.call_count == 2 and risk_of(sid2) == "high"  # un seul appel pour cette conversation
+    assert [c.args[0] for c in env.spy.call_args_list].count("Je veux que vous me fassiez un portefeuille") == 2
+
+
+def test_ctx3_repeated_ambiguous_answer_with_other_numbers_keeps_one_pending_request(env):
+    sid = "flow-repeat-00001"
+    env.post("Je veux que vous me fassiez un portefeuille", sid)
+    for _ in range(3):
+        body = env.post("au moins 12 ans", sid)
+        assert "Voulez-vous utiliser 12 ans pour cette simulation ?" in body["reply"] and env.engine.invoke.call_count == 0
+    env.post("Oui, je confirme un horizon de 12 ans exactement.", sid)
+    env.post("Je confirme une tolérance au risque modérée.", sid)
+    assert env.engine.invoke.call_count == 1
+
+
+def test_ctx3_onboarding_only_completes_the_profile_without_an_unsolicited_build(env):
+    sid = "flow-onboard-00001"
+    post_after(env, sid, "environ 25 %", WELCOME_Q)
+    env.post("Je confirme une tolérance au risque modérée.", sid)
+    env.post("Mon horizon de placement est de 5 ans.", sid)
+    state = app_module.SESSIONS.get(sid)
+    assert state["profile"] == {"risk_tolerance": "medium", "horizon_years": 5.0}  # profil complet
+    assert env.engine.invoke.call_count == 0 and app_module.SESSIONS.get_pending(sid) is None
+    env.post("Préparer un achat", sid)
+    env.post("Parle-moi du Bitcoin", sid)
+    assert env.engine.invoke.call_count == 0
+    # demande explicite plus tard : une seule construction avec le profil déjà confirmé
+    body = env.post("Je veux que vous me fassiez un portefeuille", sid)
+    assert env.engine.invoke.call_count == 1 and body["triggered"] is True
+    env.post("Merci", sid)
+    assert env.engine.invoke.call_count == 1

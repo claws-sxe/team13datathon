@@ -9,6 +9,7 @@
 // renvoyés (texte, nombres en "25 %", objets…), l'interface reçoit toujours le même format
 // et ne peut plus planter (écran blanc).
 import { mockBackend } from "./mockBackend";
+import { normalizeSuggestions } from "./suggestions";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -198,7 +199,7 @@ function normalize(data) {
     metrics: normalizeMetrics(d.metrics),
     alerts: normalizeAlerts(d.alerts),
     trace: normalizeTrace(d.trace),
-    suggestions: Array.isArray(d.suggestions) ? d.suggestions.map(String) : null,
+    suggestions: normalizeSuggestions(d.suggestions),
     // Contrôles et preuves de l'agent, conservés tels quels pour affichage ou débogage
     status: d.status,
     checks: d.checks ?? null,

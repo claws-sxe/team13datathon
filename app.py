@@ -1,6 +1,7 @@
 import copy
 import json
 import os
+import re
 import sys
 from typing import Optional
 
@@ -159,8 +160,8 @@ def _finalize(body, new_state, message, reply, calls, spec=None):
     guards = mh.reply_guards(reply, message, calls, spec)
     if not all(g["passed"] for g in guards):
         reply, body["status"] = mh._REPLIES["needs_review"], "needs_review"
-        body.pop("portfolio", None)
-        body.pop("metrics", None)
+        for k in ("portfolio", "metrics", "suggestions"):
+            body.pop(k, None)
         guards = mh.reply_guards(reply, message, calls, None)
     body["reply"] = reply
     body["evidence"] = ag.build_evidence(calls)
@@ -184,31 +185,133 @@ def _describe_engine_action(body, inputs, data):
             act["evidence_ids"].append(item["id"])
 
 
-def process_chat(user_message, state, pending=None):
+def _revert_risk_from_percentage(prior_state, new_state, message):
+    """Garde-fou : un pourcentage (baisse supportable, performance d'un titre...) n'est pas une catégorie de risque.
+    Si l'agent a quand même enregistré une tolérance au risque à partir d'un message sans catégorie, on rétablit la
+    valeur précédente. Retourne le pourcentage cité si une correction a eu lieu, sinon None."""
+    pct = bridge.percent_without_risk_category(message)
+    prior = prior_state or {"profile": {}, "uncertain": {}, "changes": []}
+    if not pct or (new_state["profile"].get("risk_tolerance") == prior["profile"].get("risk_tolerance")
+                   and ("risk_tolerance" in new_state["uncertain"]) == ("risk_tolerance" in prior["uncertain"])):
+        return None
+    for key in ("profile", "uncertain"):
+        if "risk_tolerance" in prior[key]:
+            new_state[key]["risk_tolerance"] = copy.deepcopy(prior[key]["risk_tolerance"])
+        else:
+            new_state[key].pop("risk_tolerance", None)
+    kept = new_state["changes"][:len(prior["changes"])]
+    kept += [e for e in new_state["changes"][len(prior["changes"]):] if e.get("field") != "risk_tolerance"]
+    new_state["changes"] = kept
+    return pct
+
+
+def _set_field(new_state, field, value):
+    """Enregistre une valeur CONFIRMÉE par l'investisseur (correction explicite) sans dépendre du modèle."""
+    session = ag.ProfileSession()
+    session.profile = copy.deepcopy(new_state["profile"])
+    session.uncertain = copy.deepcopy(new_state["uncertain"])
+    session.changes = copy.deepcopy(new_state["changes"])
+    r = session.set_field(field, value, explicit_correction=True)
+    if r["status"] in ("set", "corrected", "clarified", "unchanged"):
+        new_state.update(profile=copy.deepcopy(session.profile), uncertain=copy.deepcopy(session.uncertain),
+                         changes=copy.deepcopy(session.changes))
+        return True
+    return False
+
+
+def _last_assistant_text(state):
+    for m in reversed((state or {}).get("messages") or []):
+        if m.get("role") == "assistant":
+            return " ".join(b.get("text", "") for b in m.get("content", []) if isinstance(b, dict) and "text" in b)
+    return ""
+
+
+def _last_coach_text(chat_history, state):
+    """Dernier message du coach tel que l'investisseur l'a vu (le site l'envoie : l'accueil n'est pas dans l'état)."""
+    for m in reversed(chat_history or []):
+        if isinstance(m, dict) and m.get("role") == "assistant" and isinstance(m.get("content"), str):
+            return m["content"][:1500]
+        if isinstance(m, dict) and m.get("role") == "user":
+            break
+    return _last_assistant_text(state)
+
+
+def _question_of(text):
+    qs = [x for x in re.split(r"(?<=[.!?])\s+", text or "") if "?" in x]
+    return qs[-1].strip() if qs else ""
+
+
+def with_context(message, state, coach_text):
+    """Première réponse d'une conversation serveur : le coach avait posé l'accueil côté site, l'agent ne l'a pas vu.
+    On lui donne la question à laquelle une réponse courte répond; la réponse de l'investisseur reste intacte."""
+    question = _question_of(coach_text)
+    if (state or {}).get("messages") or not question or bridge.is_question(message) or len(message.split()) > 8:
+        return message
+    return f"[Réponse à la question du coach : « {question} »] {message}"
+
+
+def _confirmation_just_asked(prior_state, confirm):
+    """« Oui » ne confirme un nombre que s'il répond à la question de confirmation posée juste avant."""
+    return bool(confirm) and f"utiliser {confirm['value']} ans pour cette simulation" in _last_assistant_text(prior_state)
+
+
+def process_chat(user_message, state, pending=None, chat_history=None):
     """Un tour de conversation. Retourne (réponse JSON, nouvel état, demande de portefeuille en attente | None)."""
     intent = bridge.classify_portfolio_intent(user_message)
+    coach_text = _last_coach_text(chat_history, state)
+    message = with_context(user_message, state, coach_text)  # ce que reçoit l'agent
     old_changes = len((state or {}).get("changes") or [])
-    out = mh.handle_message(user_message, state)
+    out = mh.handle_message(message, state)
     new_state = out["session_state"]
     body = {"reply": out["reply"], "triggered": False, "status": out["status"], "route": "handle_message",
             "checks": out["checks"], "evidence": out["evidence"]}
     turn = new_state["turn_count"]
     if pending and turn - pending["turn"] > bridge.PENDING_MAX_TURNS:
         pending = None  # trop ancienne : l'investisseur n'y répond plus
-
     # needs_review = le brouillon de l'agent a échoué à ses garde-fous, mais le profil de ce tour est bien enregistré
     # (invalid_* et model_error, eux, n'ont rien modifié). Pour une construction de portefeuille le brouillon est de
     # toute façon remplacé : on poursuit, et la réponse finale est validée à son tour (_finalize).
     if out["status"] in ("ok", "needs_review"):
-        if intent == "cancel" or (pending and bridge.is_cancel_phrase(user_message)):
+        calls = _turn_calls(state, new_state)
+        pct = _revert_risk_from_percentage(state, new_state, user_message)
+        if pct:
+            body["checks"] = {**body["checks"], "risk_from_percentage": {"corrected": True, "percentage": pct}}
+        cancelled = intent == "cancel" or (pending and bridge.is_cancel_phrase(user_message))
+        touched = {e.get("field") for e in new_state["changes"][old_changes:]}
+        touched |= {c["input"].get("field") for c in calls
+                    if c["name"] in PROFILE_TOOLS and isinstance(c.get("input"), dict)}
+        if pending and not cancelled:
+            wants_horizon = "horizon_years" in pending["fields"]
+            exact = bridge.exact_horizon_years(user_message) if wants_horizon else None
+            horizon_ok = isinstance(new_state["profile"].get("horizon_years"), (int, float))
+            if pending.get("confirm") and bridge.is_affirmative(user_message) \
+                    and _confirmation_just_asked(state, pending["confirm"]):
+                if _set_field(new_state, pending["confirm"]["field"], pending["confirm"]["value"]):
+                    touched.add(pending["confirm"]["field"])
+            elif exact is not None and not horizon_ok and _set_field(new_state, "horizon_years", exact):
+                touched.add("horizon_years")  # « Non, plutôt 20 ans » : correction explicite d'un horizon exact
+        if cancelled:
             pending = None
         else:
-            touched = {e.get("field") for e in new_state["changes"][old_changes:]}
             resume = bool(pending) and bool(touched & set(pending["fields"]))
             if intent == "build" or resume:
-                pending = _portfolio_turn(body, new_state, state, user_message, pending)
+                pending = _portfolio_turn(body, new_state, state, message, pending)
+        if body["route"] == "handle_message" and bridge.is_tolerable_drop_answer(user_message, coach_text):
+            _risk_percentage_reply(body, new_state, state, message, bridge.percent_without_risk_category(user_message))
     body["profile"] = bridge.profile_for_site(new_state)
     return body, new_state, pending
+
+
+def _risk_percentage_reply(body, new_state, prior_state, message, amount):
+    """Réponse déterministe : le pourcentage est compris comme une baisse supportable, jamais converti en risque."""
+    calls = [c for c in _turn_calls(prior_state, new_state)
+             if c["name"] in PROFILE_TOOLS and (c.get("input") or {}).get("field") != "risk_tolerance"]
+    plain = amount[:1].isdigit()  # « 35 % » tel quel; « environ 25 % » garde sa réserve entre parenthèses
+    drop = f"une baisse temporaire de {amount} sans vendre" if plain else f"une baisse temporaire sans vendre ({amount})"
+    text = (f"C'est noté : vous pourriez supporter {drop}. Je ne la convertis pas moi-même en niveau de risque. "
+            f"{bridge.RISK_QUESTION}")
+    body.update(route="risk_category_clarification", status="ok", suggestions=bridge.RISK_CHOICES)
+    _finalize(body, new_state, message, text, calls)
 
 
 def _portfolio_turn(body, new_state, prior_state, message, pending):
@@ -217,13 +320,14 @@ def _portfolio_turn(body, new_state, prior_state, message, pending):
     # (mises à jour du profil + moteur + contrôle du profil).
     calls = [c for c in _turn_calls(prior_state, new_state) if c["name"] in PROFILE_TOOLS]
     body["status"] = "ok"  # un brouillon rejeté de l'agent est écarté; _finalize remet needs_review si la réponse finale échoue
-    inputs, questions, fields = bridge.engine_inputs(new_state["profile"], new_state["uncertain"])
+    inputs, questions, fields, extras = bridge.engine_inputs(new_state["profile"], new_state["uncertain"])
     if inputs is None:
         text = "Pour construire un portefeuille fictif, il me manque une information :\n- " + "\n- ".join(questions)
-        body.update(route="portfolio_clarification")
+        body.update(route="portfolio_clarification", suggestions=extras["suggestions"])
         _finalize(body, new_state, message, text, calls)
         body["checks"]["portfolio_engine"] = {"called": False, "needs": questions}
-        return {"fields": fields, "turn": new_state["turn_count"]}
+        # la demande reste en attente, y compris quand l'investisseur répète une réponse ambiguë
+        return {"fields": fields, "turn": new_state["turn_count"], "confirm": extras["confirm"]}
 
     try:
         data = call_portfolio_engine(inputs)
@@ -261,12 +365,13 @@ def chat_with_agent(request: ChatRequest):
     sid = request.session_id
     try:
         if sid is None:  # pas de session : conversation neuve, rien n'est conservé
-            body, _, _ = process_chat(request.user_message, None)
+            body, _, _ = process_chat(request.user_message, None, None, request.chat_history)
             return body
         with SESSIONS.lock_for(sid):
             if request.reset:
                 SESSIONS.reset(sid)
-            body, new_state, pending = process_chat(request.user_message, SESSIONS.get(sid), SESSIONS.get_pending(sid))
+            body, new_state, pending = process_chat(request.user_message, SESSIONS.get(sid), SESSIONS.get_pending(sid),
+                                                 request.chat_history)
             SESSIONS.put(sid, new_state)
             SESSIONS.put_pending(sid, pending)
         body["session_id"] = sid
