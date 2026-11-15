@@ -19,7 +19,7 @@ export async function sendMessage({ session_id, messages }) {
   const last = messages[messages.length - 1];
   const res = await fetch("https://forty-years-give.loca.lt/api/chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Bypass-Tunnel-Reminder": "true" },
     body: JSON.stringify({
       session_id, // même identifiant = même conversation côté serveur; nouveau à chaque « Recommencer »
       user_message: last.content,
