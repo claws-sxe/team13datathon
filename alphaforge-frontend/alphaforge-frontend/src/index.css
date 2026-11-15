@@ -1,0 +1,19 @@
+:root {
+  --bg: #f4f5f7;
+  --card: #ffffff;
+  --line: #e3e5ea;
+  --ink: #1d2433;
+  --muted: #6b7280;
+  --accent: #2f5d9e;
+  --accent-soft: #a9c0e3;
+  --danger: #c0392b;
+  --c-bond: #4a78c2;
+  --c-equity: #2f9e78;
+  --c-gold: #d4a017;
+  --c-crypto: #8e5bd1;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
