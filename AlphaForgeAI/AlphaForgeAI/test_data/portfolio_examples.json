@@ -1,0 +1,1807 @@
+[
+  {
+    "example": "amira_fictif",
+    "description": "EXEMPLE FICTIF : persona Amira, pour tester les contrôles. Aucune personne ni aucun portefeuille réels; pas un conseil en placement. Horizon « 15 ans ou plus » conservé comme fourchette ouverte. Connaissances, préférence ESG, exclusions et titres demandés non précisés : laissés inconnus.",
+    "profile_validation": {
+      "status": "incomplete",
+      "valid": true,
+      "profile": {
+        "objective": "growth",
+        "horizon_years": {
+          "min": 15.0,
+          "max": null
+        },
+        "risk_tolerance": "high",
+        "knowledge": null,
+        "crypto_preference": "open",
+        "esg_preference": null,
+        "exclusions": null,
+        "requested_tickers": null
+      },
+      "missing": [
+        {
+          "field": "knowledge",
+          "message": "Connaissances financières : information non fournie (inconnue)."
+        },
+        {
+          "field": "esg_preference",
+          "message": "Préférence esg : information non fournie (inconnue)."
+        },
+        {
+          "field": "exclusions",
+          "message": "Exclusions : information non fournie (inconnue)."
+        },
+        {
+          "field": "requested_tickers",
+          "message": "Titres demandés : information non fournie (inconnue)."
+        }
+      ],
+      "errors": [],
+      "warnings": []
+    },
+    "review": {
+      "status": "ok",
+      "generated_utc": "2026-11-14T22:25:12+00:00",
+      "description": "EXEMPLE FICTIF : persona Amira, pour tester les contrôles. Aucune personne ni aucun portefeuille réels; pas un conseil en placement. Horizon « 15 ans ou plus » conservé comme fourchette ouverte. Connaissances, préférence ESG, exclusions et titres demandés non précisés : laissés inconnus.",
+      "inputs": {
+        "reference_currency": "CAD",
+        "weights": {
+          "AAPL": 0.15,
+          "MSFT": 0.1,
+          "NVDA": 0.1,
+          "QQQ": 0.15,
+          "BTC-USD": 0.08,
+          "ETH-USD": 0.04,
+          "XIU.TO": 0.12,
+          "XBB.TO": 0.1,
+          "GLD": 0.08,
+          "JNJ": 0.08
+        },
+        "raw_weights": {
+          "AAPL": 0.15,
+          "MSFT": 0.1,
+          "NVDA": 0.1,
+          "QQQ": 0.15,
+          "BTC-USD": 0.08,
+          "ETH-USD": 0.04,
+          "XIU.TO": 0.12,
+          "XBB.TO": 0.1,
+          "GLD": 0.08,
+          "JNJ": 0.08
+        },
+        "weights_total_raw": 1.0,
+        "rounding_correction": null,
+        "requested_period": {
+          "start": "2021-11-12",
+          "end": "2026-11-12"
+        }
+      },
+      "results": {
+        "cumulative_return": 1.392140570535958,
+        "annualized_volatility": 0.18185219735476504,
+        "max_drawdown": {
+          "value": -0.27274914392901894,
+          "peak_date": "2021-12-15",
+          "trough_date": "2022-06-16"
+        },
+        "largest_position": {
+          "ticker": "AAPL",
+          "weight": 0.15,
+          "tied_tickers": [
+            "AAPL",
+            "QQQ"
+          ]
+        },
+        "performance_2022": {
+          "year": 2022,
+          "status": "complete",
+          "value": -0.22659461377109713,
+          "start_date": "2021-12-31",
+          "end_date": "2022-12-30",
+          "partial_window_return": null,
+          "partial_window": null,
+          "message": "De 2021-12-31 (dernière valorisation avant 2022) à 2022-12-30."
+        },
+        "asset_metrics": {
+          "AAPL": {
+            "status": "ok",
+            "ticker": "AAPL",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 1.7501130256369026,
+            "annualized_volatility": 0.28284536371660757,
+            "max_drawdown": -0.3403182540379046,
+            "max_drawdown_peak_date": "2024-12-24",
+            "max_drawdown_trough_date": "2025-04-08"
+          },
+          "MSFT": {
+            "status": "ok",
+            "ticker": "MSFT",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.8360715118018076,
+            "annualized_volatility": 0.2846389361369105,
+            "max_drawdown": -0.3430779787717695,
+            "max_drawdown_peak_date": "2025-10-28",
+            "max_drawdown_trough_date": "2026-03-27"
+          },
+          "NVDA": {
+            "status": "ok",
+            "ticker": "NVDA",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 5.23142893163272,
+            "annualized_volatility": 0.5138315042950868,
+            "max_drawdown": -0.6345780519513389,
+            "max_drawdown_peak_date": "2021-11-29",
+            "max_drawdown_trough_date": "2022-10-14"
+          },
+          "QQQ": {
+            "status": "ok",
+            "ticker": "QQQ",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 1.0380441371439657,
+            "annualized_volatility": 0.2306332874274025,
+            "max_drawdown": -0.31675502102241093,
+            "max_drawdown_peak_date": "2021-12-29",
+            "max_drawdown_trough_date": "2022-06-16"
+          },
+          "BTC-USD": {
+            "status": "ok",
+            "ticker": "BTC-USD",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.2615922836984217,
+            "annualized_volatility": 0.5123203147840912,
+            "max_drawdown": -0.7365519973875928,
+            "max_drawdown_peak_date": "2021-11-12",
+            "max_drawdown_trough_date": "2022-11-21"
+          },
+          "ETH-USD": {
+            "status": "ok",
+            "ticker": "ETH-USD",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": -0.5097411575713687,
+            "annualized_volatility": 0.6871464041484212,
+            "max_drawdown": -0.7719324203266295,
+            "max_drawdown_peak_date": "2021-11-30",
+            "max_drawdown_trough_date": "2022-07-12"
+          },
+          "XIU.TO": {
+            "status": "ok",
+            "ticker": "XIU.TO",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.8965304096749127,
+            "annualized_volatility": 0.1315803718963348,
+            "max_drawdown": -0.1636012731598746,
+            "max_drawdown_peak_date": "2022-04-04",
+            "max_drawdown_trough_date": "2022-10-12"
+          },
+          "XBB.TO": {
+            "status": "ok",
+            "ticker": "XBB.TO",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.03611412730835051,
+            "annualized_volatility": 0.06754109508182558,
+            "max_drawdown": -0.1547974797578775,
+            "max_drawdown_peak_date": "2021-12-17",
+            "max_drawdown_trough_date": "2022-10-20"
+          },
+          "GLD": {
+            "status": "ok",
+            "ticker": "GLD",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 1.3079560950062965,
+            "annualized_volatility": 0.18570586104073064,
+            "max_drawdown": -0.2599925169596916,
+            "max_drawdown_peak_date": "2026-01-28",
+            "max_drawdown_trough_date": "2026-10-30"
+          },
+          "JNJ": {
+            "status": "ok",
+            "ticker": "JNJ",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 1.2414036337836123,
+            "annualized_volatility": 0.18599643199902346,
+            "max_drawdown": -0.15549390670711927,
+            "max_drawdown_peak_date": "2025-03-10",
+            "max_drawdown_trough_date": "2025-05-14"
+          }
+        }
+      },
+      "periods": {
+        "requested": {
+          "start": "2021-11-12",
+          "end": "2026-11-12"
+        },
+        "data_coverage_common_dates": {
+          "start": "2021-11-12",
+          "end": "2026-11-12"
+        },
+        "effective": {
+          "start": "2021-11-12",
+          "end": "2026-11-12"
+        },
+        "observations": 1228,
+        "returns": 1227
+      },
+      "checks": {
+        "price_quality": {
+          "AAPL": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "MSFT": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "NVDA": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "QQQ": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "BTC-USD": {
+            "raw_rows": 1827,
+            "observations": 1827,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "ETH-USD": {
+            "raw_rows": 1827,
+            "observations": 1827,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "XIU.TO": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "XBB.TO": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "GLD": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "JNJ": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          }
+        },
+        "fx": {
+          "required": true,
+          "rule": "dernier taux observé à la date de cotation ou avant",
+          "missing_dates": {},
+          "carried_count": 1386,
+          "max_age_days": 4,
+          "carried_examples": [
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            },
+            {
+              "date": "2021-11-13",
+              "rate_date": "2021-11-12",
+              "age_days": 1
+            },
+            {
+              "date": "2021-11-14",
+              "rate_date": "2021-11-12",
+              "age_days": 2
+            },
+            {
+              "date": "2021-11-20",
+              "rate_date": "2021-11-19",
+              "age_days": 1
+            },
+            {
+              "date": "2021-11-13",
+              "rate_date": "2021-11-12",
+              "age_days": 1
+            },
+            {
+              "date": "2021-11-14",
+              "rate_date": "2021-11-12",
+              "age_days": 2
+            },
+            {
+              "date": "2021-11-20",
+              "rate_date": "2021-11-19",
+              "age_days": 1
+            },
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            }
+          ]
+        },
+        "alignment": {
+          "common_dates_total": 1228,
+          "dates_excluded_by_ticker": {
+            "AAPL": 27,
+            "MSFT": 27,
+            "NVDA": 27,
+            "QQQ": 27,
+            "BTC-USD": 599,
+            "ETH-USD": 599,
+            "XIU.TO": 27,
+            "XBB.TO": 27,
+            "GLD": 27,
+            "JNJ": 27
+          },
+          "has_crypto": true,
+          "convention": "Les rendements sont calculés entre dates de cotation communes à tous les actifs (jours où chaque actif a un prix valide et où un taux de change est disponible, si requis). Pour un portefeuille mixte, les cryptoactifs sont donc observés aux dates boursières communes; leur variation entre deux de ces dates (week-end inclus) est conservée : le prix du lundi est comparé à celui du vendredi. Les dates de week-end ne sont pas des points de calcul. Un portefeuille 100 % cryptoactifs utilise tous les jours civils communs."
+        },
+        "annualization": {
+          "periods_per_year": 252,
+          "convention": "252 observations par an (calendrier boursier; dates communes aux actifs boursiers)",
+          "observed_observations_per_year": 245.43359802847755,
+          "weights_total_after_correction": 1.0
+        },
+        "quality_warnings_file": {
+          "path": "data/data_quality_warnings.txt",
+          "present": false,
+          "error": null,
+          "relevant": []
+        }
+      },
+      "sources": [
+        {
+          "file": "prices_daily.csv",
+          "available": true,
+          "source": "Yahoo Finance via the open-source yfinance Python library",
+          "source_url": "https://finance.yahoo.com",
+          "retrieved_on": "2026-11-13",
+          "coverage": "2021-11-12 to 2026-11-12",
+          "frequency": "daily (trading days per market; crypto 7 days/week)",
+          "processing": "No forward-fill; no calendar alignment; rows only on days Yahoo reports a price; prices in the asset's listing currency",
+          "limitations": "adj_close is back-adjusted for splits and dividends so values shift when data is re-downloaded; crypto rows are UTC calendar days; Yahoo data is not exchange-certified",
+          "terms_of_use": "Yahoo terms: https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html (retrieved 2026-11-13)",
+          "missing_fields": [],
+          "message": ""
+        },
+        {
+          "file": "assets_universe.csv",
+          "available": true,
+          "source": "Compiled by organizers; sector labels follow GICS sector names",
+          "source_url": "n/a",
+          "retrieved_on": "2026-11-13",
+          "coverage": "n/a",
+          "frequency": "static",
+          "processing": "Hand-curated selection",
+          "limitations": "Sector labels are organizer-assigned and simplified; ETF 'sector' describes exposure; not an official classification",
+          "terms_of_use": "Free to use within the datathon",
+          "missing_fields": [
+            "source_url",
+            "coverage"
+          ],
+          "message": "Information manquante dans data/sources_metadata.csv : source_url, coverage"
+        },
+        {
+          "file": "fx_usdcad_daily.csv",
+          "available": true,
+          "source": "Bank of Canada Valet API series FXUSDCAD",
+          "source_url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json",
+          "retrieved_on": "2026-11-13",
+          "coverage": "2021-11-12 to 2026-11-12",
+          "frequency": "business daily (Canadian business days)",
+          "processing": "cadusd = 1/usdcad rounded to 6 decimals",
+          "limitations": "Single daily rate published around 16:30 ET; no rate on Canadian holidays",
+          "terms_of_use": "Bank of Canada terms: https://www.bankofcanada.ca/terms/",
+          "missing_fields": [],
+          "message": ""
+        }
+      ],
+      "errors": [],
+      "warnings": [
+        "Le fichier data/data_quality_warnings.txt est absent; aucun avertissement de qualité examiné."
+      ],
+      "assumptions": [
+        "Prix : adj_close (ajusté pour fractionnements et dividendes), sans réajustement.",
+        "Les rendements sont calculés entre dates de cotation communes à tous les actifs (jours où chaque actif a un prix valide et où un taux de change est disponible, si requis). Pour un portefeuille mixte, les cryptoactifs sont donc observés aux dates boursières communes; leur variation entre deux de ces dates (week-end inclus) est conservée : le prix du lundi est comparé à celui du vendredi. Les dates de week-end ne sont pas des points de calcul. Un portefeuille 100 % cryptoactifs utilise tous les jours civils communs.",
+        "Change : les valeurs de chaque actif sont converties dans la devise de référence avant le calcul des rendements, avec le dernier taux USD/CAD de la Banque du Canada observé à la date de cotation ou avant (aucune observation postérieure n'est utilisée). USD vers CAD : multiplication par usdcad; CAD vers USD : division par usdcad. Une date sans aucun taux disponible est exclue et signalée.",
+        "Rééquilibrage à chaque observation : les poids cibles sont rétablis à chaque date commune; le rendement du portefeuille est la somme pondérée des rendements des actifs.",
+        "Frais de transaction, de gestion et impôts exclus.",
+        "Annualisation : 252 observations par an pour un portefeuille contenant au moins un actif boursier (calendrier boursier commun), 365 pour un portefeuille 100 % cryptoactifs. Volatilité = écart-type échantillonnal des rendements du portefeuille x racine du nombre de périodes.",
+        "Poids : fractions ou pourcentages en chaîne (« 25.00% »). Seule correction permise : un total à 0,05 point de pourcentage ou moins de 100 % est ramené à 100 % par division proportionnelle, et la correction est signalée. Tout autre écart est refusé.",
+        "Performance 2022 : point de départ = dernière valorisation commune avant le 1er janvier 2022; calculée sur toutes les données disponibles, indépendamment de la période demandée."
+      ],
+      "limitations": [
+        "Résultats historiques sur la période étudiée; ni prévisions ni conseils en placement.",
+        "Le rééquilibrage à chaque observation est une idéalisation : un portefeuille réel qui ne rééquilibre pas obtiendrait des résultats différents.",
+        "Les dates communes excluent les jours où l'un des actifs ne cote pas (jours fériés TSX/États-Unis, week-ends); la volatilité du portefeuille reflète donc des intervalles parfois de plus d'un jour, annualisés avec une convention fixe de 252 ou 365.",
+        "Le taux de la Banque du Canada est publié une fois par jour (vers 16 h 30 HE) et n'est pas synchronisé avec la clôture de chaque marché; les jours fériés canadiens utilisent le dernier taux antérieur.",
+        "Frais, impôts, écarts de conversion réels et dividendes réinvestis autrement que par adj_close non modélisés.",
+        "Biais du survivant : l'univers a été choisi en 2026 parmi des titres aujourd'hui importants.",
+        "adj_close est ajusté rétroactivement depuis la date de téléchargement; les valeurs anciennes changent lors d'un nouveau téléchargement.",
+        "Seules les devises CAD et USD sont prises en charge."
+      ],
+      "min_obs_note": "Le nombre minimal d'observations communes est un seuil technique configurable (--min-obs); il ne garantit pas la fiabilité statistique des indicateurs."
+    },
+    "check": {
+      "status": "checked",
+      "valid": true,
+      "conclusion": "no_violation_found_among_verifiable_constraints",
+      "conclusion_message": "Aucune violation détectée parmi les contraintes vérifiables; des éléments restent impossibles à vérifier, donc aucune conformité globale n'est affirmée.",
+      "violations": [],
+      "tensions": [],
+      "unverifiable": [
+        {
+          "category": "unverifiable",
+          "code": "exclusions_unknown",
+          "field": "exclusions",
+          "message": "Exclusions inconnues : impossible de vérifier le respect d'exclusions.",
+          "evidence": [
+            {
+              "source": "validate_profile.missing",
+              "field": "exclusions"
+            }
+          ]
+        },
+        {
+          "category": "unverifiable",
+          "code": "esg_preference_unknown",
+          "field": "esg_preference",
+          "message": "Préférence ESG inconnue : impossible de vérifier.",
+          "evidence": [
+            {
+              "source": "validate_profile.missing",
+              "field": "esg_preference"
+            }
+          ]
+        },
+        {
+          "category": "unverifiable",
+          "code": "volatility_limit_undefined",
+          "field": "risk_tolerance",
+          "message": "Tolérance au risque qualitative sans seuil de volatilité fourni : la volatilité observée (18.19 %) ne peut pas être comparée à une limite. Aucune limite n'est déduite de l'horizon.",
+          "evidence": [
+            {
+              "source": "profile.risk_tolerance",
+              "value": "high"
+            },
+            {
+              "source": "review.results.annualized_volatility",
+              "value": 0.18185219735476504
+            }
+          ]
+        },
+        {
+          "category": "unverifiable",
+          "code": "objective_alignment_undefined",
+          "field": "objective",
+          "message": "Adéquation à l'objectif non vérifiable : aucun critère chiffré n'est associé à l'objectif.",
+          "evidence": [
+            {
+              "source": "profile.objective",
+              "value": "growth"
+            }
+          ]
+        }
+      ],
+      "satisfied": [],
+      "notes": [
+        "Horizon fourni (15 ans ou plus) : il n'est utilisé pour déduire aucune interdiction ni aucune limite de volatilité.",
+        "Le rapport de revue contient 1 avertissement(s) à consulter.",
+        "Profil incomplet : knowledge, esg_preference, exclusions, requested_tickers restent inconnus."
+      ],
+      "errors": [],
+      "profile_check": {
+        "status": "incomplete",
+        "missing": [
+          "knowledge",
+          "esg_preference",
+          "exclusions",
+          "requested_tickers"
+        ]
+      }
+    }
+  },
+  {
+    "example": "mateo_fictif",
+    "description": "EXEMPLE FICTIF : persona Mateo, pour tester les contrôles. Aucune personne ni aucun portefeuille réels; pas un conseil en placement. Horizon « 8 à 12 ans » conservé comme fourchette. « Préférences ESG » interprétées comme « preferred » (préféré), pas « required ». Préférence crypto, exclusions et titres demandés non précisés : laissés inconnus.",
+    "profile_validation": {
+      "status": "incomplete",
+      "valid": true,
+      "profile": {
+        "objective": "balanced_growth",
+        "horizon_years": {
+          "min": 8.0,
+          "max": 12.0
+        },
+        "risk_tolerance": "medium",
+        "knowledge": null,
+        "crypto_preference": null,
+        "esg_preference": "preferred",
+        "exclusions": null,
+        "requested_tickers": null
+      },
+      "missing": [
+        {
+          "field": "knowledge",
+          "message": "Connaissances financières : information non fournie (inconnue)."
+        },
+        {
+          "field": "crypto_preference",
+          "message": "Préférence pour les cryptoactifs : information non fournie (inconnue)."
+        },
+        {
+          "field": "exclusions",
+          "message": "Exclusions : information non fournie (inconnue)."
+        },
+        {
+          "field": "requested_tickers",
+          "message": "Titres demandés : information non fournie (inconnue)."
+        }
+      ],
+      "errors": [],
+      "warnings": []
+    },
+    "review": {
+      "status": "ok",
+      "generated_utc": "2026-11-14T22:25:12+00:00",
+      "description": "EXEMPLE FICTIF : persona Mateo, pour tester les contrôles. Aucune personne ni aucun portefeuille réels; pas un conseil en placement. Horizon « 8 à 12 ans » conservé comme fourchette. « Préférences ESG » interprétées comme « preferred » (préféré), pas « required ». Préférence crypto, exclusions et titres demandés non précisés : laissés inconnus.",
+      "inputs": {
+        "reference_currency": "CAD",
+        "weights": {
+          "ESGV": 0.3,
+          "XIU.TO": 0.15,
+          "RY.TO": 0.1,
+          "XBB.TO": 0.2,
+          "AGG": 0.1,
+          "JNJ": 0.05,
+          "GLD": 0.1
+        },
+        "raw_weights": {
+          "ESGV": 0.3,
+          "XIU.TO": 0.15,
+          "RY.TO": 0.1,
+          "XBB.TO": 0.2,
+          "AGG": 0.1,
+          "JNJ": 0.05,
+          "GLD": 0.1
+        },
+        "weights_total_raw": 1.0,
+        "rounding_correction": null,
+        "requested_period": {
+          "start": "2021-11-12",
+          "end": "2026-11-12"
+        }
+      },
+      "results": {
+        "cumulative_return": 0.7280875713821031,
+        "annualized_volatility": 0.0921050169520582,
+        "max_drawdown": {
+          "value": -0.1351474647299642,
+          "peak_date": "2021-12-29",
+          "trough_date": "2022-06-16"
+        },
+        "largest_position": {
+          "ticker": "ESGV",
+          "weight": 0.3,
+          "tied_tickers": [
+            "ESGV"
+          ]
+        },
+        "performance_2022": {
+          "year": 2022,
+          "status": "complete",
+          "value": -0.08194141852301529,
+          "start_date": "2021-12-31",
+          "end_date": "2022-12-30",
+          "partial_window_return": null,
+          "partial_window": null,
+          "message": "De 2021-12-31 (dernière valorisation avant 2022) à 2022-12-30."
+        },
+        "asset_metrics": {
+          "ESGV": {
+            "status": "ok",
+            "ticker": "ESGV",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.8305596631685048,
+            "annualized_volatility": 0.18235510355713996,
+            "max_drawdown": -0.2672859676556645,
+            "max_drawdown_peak_date": "2021-12-29",
+            "max_drawdown_trough_date": "2022-06-16"
+          },
+          "XIU.TO": {
+            "status": "ok",
+            "ticker": "XIU.TO",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.8965304096749127,
+            "annualized_volatility": 0.1315803718963348,
+            "max_drawdown": -0.1636012731598746,
+            "max_drawdown_peak_date": "2022-04-04",
+            "max_drawdown_trough_date": "2022-10-12"
+          },
+          "RY.TO": {
+            "status": "ok",
+            "ticker": "RY.TO",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 1.5950161542190786,
+            "annualized_volatility": 0.1561925888134638,
+            "max_drawdown": -0.21015511280639387,
+            "max_drawdown_peak_date": "2022-02-08",
+            "max_drawdown_trough_date": "2023-10-27"
+          },
+          "XBB.TO": {
+            "status": "ok",
+            "ticker": "XBB.TO",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.03611412730835051,
+            "annualized_volatility": 0.06754109508182558,
+            "max_drawdown": -0.1547974797578775,
+            "max_drawdown_peak_date": "2021-12-17",
+            "max_drawdown_trough_date": "2022-10-20"
+          },
+          "AGG": {
+            "status": "ok",
+            "ticker": "AGG",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.11689083429782499,
+            "annualized_volatility": 0.07461545865101453,
+            "max_drawdown": -0.12751041239058147,
+            "max_drawdown_peak_date": "2021-12-20",
+            "max_drawdown_trough_date": "2022-06-13"
+          },
+          "JNJ": {
+            "status": "ok",
+            "ticker": "JNJ",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 1.2414036337836123,
+            "annualized_volatility": 0.18599643199902346,
+            "max_drawdown": -0.15549390670711927,
+            "max_drawdown_peak_date": "2025-03-10",
+            "max_drawdown_trough_date": "2025-05-14"
+          },
+          "GLD": {
+            "status": "ok",
+            "ticker": "GLD",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 1.3079560950062965,
+            "annualized_volatility": 0.18570586104073064,
+            "max_drawdown": -0.2599925169596916,
+            "max_drawdown_peak_date": "2026-01-28",
+            "max_drawdown_trough_date": "2026-10-30"
+          }
+        }
+      },
+      "periods": {
+        "requested": {
+          "start": "2021-11-12",
+          "end": "2026-11-12"
+        },
+        "data_coverage_common_dates": {
+          "start": "2021-11-12",
+          "end": "2026-11-12"
+        },
+        "effective": {
+          "start": "2021-11-12",
+          "end": "2026-11-12"
+        },
+        "observations": 1228,
+        "returns": 1227
+      },
+      "checks": {
+        "price_quality": {
+          "ESGV": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "XIU.TO": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "RY.TO": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "XBB.TO": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "AGG": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "JNJ": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "GLD": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          }
+        },
+        "fx": {
+          "required": true,
+          "rule": "dernier taux observé à la date de cotation ou avant",
+          "missing_dates": {},
+          "carried_count": 148,
+          "max_age_days": 4,
+          "carried_examples": [
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            }
+          ]
+        },
+        "alignment": {
+          "common_dates_total": 1228,
+          "dates_excluded_by_ticker": {
+            "ESGV": 27,
+            "XIU.TO": 27,
+            "RY.TO": 27,
+            "XBB.TO": 27,
+            "AGG": 27,
+            "JNJ": 27,
+            "GLD": 27
+          },
+          "has_crypto": false,
+          "convention": "Les rendements sont calculés entre dates de cotation communes à tous les actifs (jours où chaque actif a un prix valide et où un taux de change est disponible, si requis). Pour un portefeuille mixte, les cryptoactifs sont donc observés aux dates boursières communes; leur variation entre deux de ces dates (week-end inclus) est conservée : le prix du lundi est comparé à celui du vendredi. Les dates de week-end ne sont pas des points de calcul. Un portefeuille 100 % cryptoactifs utilise tous les jours civils communs."
+        },
+        "annualization": {
+          "periods_per_year": 252,
+          "convention": "252 observations par an (calendrier boursier; dates communes aux actifs boursiers)",
+          "observed_observations_per_year": 245.43359802847755,
+          "weights_total_after_correction": 1.0
+        },
+        "quality_warnings_file": {
+          "path": "data/data_quality_warnings.txt",
+          "present": false,
+          "error": null,
+          "relevant": []
+        }
+      },
+      "sources": [
+        {
+          "file": "prices_daily.csv",
+          "available": true,
+          "source": "Yahoo Finance via the open-source yfinance Python library",
+          "source_url": "https://finance.yahoo.com",
+          "retrieved_on": "2026-11-13",
+          "coverage": "2021-11-12 to 2026-11-12",
+          "frequency": "daily (trading days per market; crypto 7 days/week)",
+          "processing": "No forward-fill; no calendar alignment; rows only on days Yahoo reports a price; prices in the asset's listing currency",
+          "limitations": "adj_close is back-adjusted for splits and dividends so values shift when data is re-downloaded; crypto rows are UTC calendar days; Yahoo data is not exchange-certified",
+          "terms_of_use": "Yahoo terms: https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html (retrieved 2026-11-13)",
+          "missing_fields": [],
+          "message": ""
+        },
+        {
+          "file": "assets_universe.csv",
+          "available": true,
+          "source": "Compiled by organizers; sector labels follow GICS sector names",
+          "source_url": "n/a",
+          "retrieved_on": "2026-11-13",
+          "coverage": "n/a",
+          "frequency": "static",
+          "processing": "Hand-curated selection",
+          "limitations": "Sector labels are organizer-assigned and simplified; ETF 'sector' describes exposure; not an official classification",
+          "terms_of_use": "Free to use within the datathon",
+          "missing_fields": [
+            "source_url",
+            "coverage"
+          ],
+          "message": "Information manquante dans data/sources_metadata.csv : source_url, coverage"
+        },
+        {
+          "file": "fx_usdcad_daily.csv",
+          "available": true,
+          "source": "Bank of Canada Valet API series FXUSDCAD",
+          "source_url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json",
+          "retrieved_on": "2026-11-13",
+          "coverage": "2021-11-12 to 2026-11-12",
+          "frequency": "business daily (Canadian business days)",
+          "processing": "cadusd = 1/usdcad rounded to 6 decimals",
+          "limitations": "Single daily rate published around 16:30 ET; no rate on Canadian holidays",
+          "terms_of_use": "Bank of Canada terms: https://www.bankofcanada.ca/terms/",
+          "missing_fields": [],
+          "message": ""
+        }
+      ],
+      "errors": [],
+      "warnings": [
+        "Le fichier data/data_quality_warnings.txt est absent; aucun avertissement de qualité examiné."
+      ],
+      "assumptions": [
+        "Prix : adj_close (ajusté pour fractionnements et dividendes), sans réajustement.",
+        "Les rendements sont calculés entre dates de cotation communes à tous les actifs (jours où chaque actif a un prix valide et où un taux de change est disponible, si requis). Pour un portefeuille mixte, les cryptoactifs sont donc observés aux dates boursières communes; leur variation entre deux de ces dates (week-end inclus) est conservée : le prix du lundi est comparé à celui du vendredi. Les dates de week-end ne sont pas des points de calcul. Un portefeuille 100 % cryptoactifs utilise tous les jours civils communs.",
+        "Change : les valeurs de chaque actif sont converties dans la devise de référence avant le calcul des rendements, avec le dernier taux USD/CAD de la Banque du Canada observé à la date de cotation ou avant (aucune observation postérieure n'est utilisée). USD vers CAD : multiplication par usdcad; CAD vers USD : division par usdcad. Une date sans aucun taux disponible est exclue et signalée.",
+        "Rééquilibrage à chaque observation : les poids cibles sont rétablis à chaque date commune; le rendement du portefeuille est la somme pondérée des rendements des actifs.",
+        "Frais de transaction, de gestion et impôts exclus.",
+        "Annualisation : 252 observations par an pour un portefeuille contenant au moins un actif boursier (calendrier boursier commun), 365 pour un portefeuille 100 % cryptoactifs. Volatilité = écart-type échantillonnal des rendements du portefeuille x racine du nombre de périodes.",
+        "Poids : fractions ou pourcentages en chaîne (« 25.00% »). Seule correction permise : un total à 0,05 point de pourcentage ou moins de 100 % est ramené à 100 % par division proportionnelle, et la correction est signalée. Tout autre écart est refusé.",
+        "Performance 2022 : point de départ = dernière valorisation commune avant le 1er janvier 2022; calculée sur toutes les données disponibles, indépendamment de la période demandée."
+      ],
+      "limitations": [
+        "Résultats historiques sur la période étudiée; ni prévisions ni conseils en placement.",
+        "Le rééquilibrage à chaque observation est une idéalisation : un portefeuille réel qui ne rééquilibre pas obtiendrait des résultats différents.",
+        "Les dates communes excluent les jours où l'un des actifs ne cote pas (jours fériés TSX/États-Unis, week-ends); la volatilité du portefeuille reflète donc des intervalles parfois de plus d'un jour, annualisés avec une convention fixe de 252 ou 365.",
+        "Le taux de la Banque du Canada est publié une fois par jour (vers 16 h 30 HE) et n'est pas synchronisé avec la clôture de chaque marché; les jours fériés canadiens utilisent le dernier taux antérieur.",
+        "Frais, impôts, écarts de conversion réels et dividendes réinvestis autrement que par adj_close non modélisés.",
+        "Biais du survivant : l'univers a été choisi en 2026 parmi des titres aujourd'hui importants.",
+        "adj_close est ajusté rétroactivement depuis la date de téléchargement; les valeurs anciennes changent lors d'un nouveau téléchargement.",
+        "Seules les devises CAD et USD sont prises en charge."
+      ],
+      "min_obs_note": "Le nombre minimal d'observations communes est un seuil technique configurable (--min-obs); il ne garantit pas la fiabilité statistique des indicateurs."
+    },
+    "check": {
+      "status": "checked",
+      "valid": true,
+      "conclusion": "no_violation_found_among_verifiable_constraints",
+      "conclusion_message": "Aucune violation détectée parmi les contraintes vérifiables; des éléments restent impossibles à vérifier, donc aucune conformité globale n'est affirmée.",
+      "violations": [],
+      "tensions": [],
+      "unverifiable": [
+        {
+          "category": "unverifiable",
+          "code": "exclusions_unknown",
+          "field": "exclusions",
+          "message": "Exclusions inconnues : impossible de vérifier le respect d'exclusions.",
+          "evidence": [
+            {
+              "source": "validate_profile.missing",
+              "field": "exclusions"
+            }
+          ]
+        },
+        {
+          "category": "unverifiable",
+          "code": "crypto_preference_unknown",
+          "field": "crypto_preference",
+          "message": "Préférence crypto inconnue : impossible de vérifier.",
+          "evidence": [
+            {
+              "source": "validate_profile.missing",
+              "field": "crypto_preference"
+            }
+          ]
+        },
+        {
+          "category": "unverifiable",
+          "code": "esg_not_verifiable",
+          "field": "esg_preference",
+          "message": "Conformité ESG non vérifiable : les données ne contiennent aucune cote ESG ni analyse de controverses. Seule(s) étiquette(s) de l'organisateur trouvée(s) : ESGV (étiquette descriptive, pas une preuve de conformité).",
+          "evidence": [
+            {
+              "source": "profile.esg_preference",
+              "value": "preferred"
+            },
+            {
+              "source": "data/README.md",
+              "quote": "No ESG scores, news or fundamentals are included"
+            },
+            {
+              "source": "data/assets_universe.csv",
+              "ticker": "ESGV",
+              "asset_class": "etf_equity",
+              "sector": "Broad market (U.S., ESG-screened)",
+              "name": "Vanguard ESG U.S. Stock ETF"
+            }
+          ]
+        },
+        {
+          "category": "unverifiable",
+          "code": "volatility_limit_undefined",
+          "field": "risk_tolerance",
+          "message": "Tolérance au risque qualitative sans seuil de volatilité fourni : la volatilité observée (9.21 %) ne peut pas être comparée à une limite. Aucune limite n'est déduite de l'horizon.",
+          "evidence": [
+            {
+              "source": "profile.risk_tolerance",
+              "value": "medium"
+            },
+            {
+              "source": "review.results.annualized_volatility",
+              "value": 0.0921050169520582
+            }
+          ]
+        },
+        {
+          "category": "unverifiable",
+          "code": "objective_alignment_undefined",
+          "field": "objective",
+          "message": "Adéquation à l'objectif non vérifiable : aucun critère chiffré n'est associé à l'objectif.",
+          "evidence": [
+            {
+              "source": "profile.objective",
+              "value": "balanced_growth"
+            }
+          ]
+        }
+      ],
+      "satisfied": [],
+      "notes": [
+        "Horizon fourni (de 8 à 12 ans) : il n'est utilisé pour déduire aucune interdiction ni aucune limite de volatilité.",
+        "Le rapport de revue contient 1 avertissement(s) à consulter.",
+        "Profil incomplet : knowledge, crypto_preference, exclusions, requested_tickers restent inconnus."
+      ],
+      "errors": [],
+      "profile_check": {
+        "status": "incomplete",
+        "missing": [
+          "knowledge",
+          "crypto_preference",
+          "exclusions",
+          "requested_tickers"
+        ]
+      }
+    }
+  },
+  {
+    "example": "robert_fictif",
+    "description": "EXEMPLE FICTIF : persona Robert, pour tester les contrôles. Aucune personne ni aucun portefeuille réels; pas un conseil en placement. Horizon « 3 à 5 ans » et risque « faible à modéré » conservés comme fourchettes, sans valeur unique choisie. TSLA est un titre demandé.",
+    "profile_validation": {
+      "status": "incomplete",
+      "valid": true,
+      "profile": {
+        "objective": "capital_preservation",
+        "horizon_years": {
+          "min": 3.0,
+          "max": 5.0
+        },
+        "risk_tolerance": {
+          "min": "low",
+          "max": "medium"
+        },
+        "knowledge": null,
+        "crypto_preference": null,
+        "esg_preference": null,
+        "exclusions": null,
+        "requested_tickers": [
+          "TSLA"
+        ]
+      },
+      "missing": [
+        {
+          "field": "knowledge",
+          "message": "Connaissances financières : information non fournie (inconnue)."
+        },
+        {
+          "field": "crypto_preference",
+          "message": "Préférence pour les cryptoactifs : information non fournie (inconnue)."
+        },
+        {
+          "field": "esg_preference",
+          "message": "Préférence esg : information non fournie (inconnue)."
+        },
+        {
+          "field": "exclusions",
+          "message": "Exclusions : information non fournie (inconnue)."
+        }
+      ],
+      "errors": [],
+      "warnings": []
+    },
+    "review": {
+      "status": "ok",
+      "generated_utc": "2026-11-14T22:25:12+00:00",
+      "description": "EXEMPLE FICTIF : persona Robert, pour tester les contrôles. Aucune personne ni aucun portefeuille réels; pas un conseil en placement. Horizon « 3 à 5 ans » et risque « faible à modéré » conservés comme fourchettes, sans valeur unique choisie. TSLA est un titre demandé.",
+      "inputs": {
+        "reference_currency": "CAD",
+        "weights": {
+          "ZST.TO": 0.4,
+          "XBB.TO": 0.25,
+          "AGG": 0.15,
+          "XIU.TO": 0.05,
+          "GLD": 0.05,
+          "TSLA": 0.1
+        },
+        "raw_weights": {
+          "ZST.TO": 0.4,
+          "XBB.TO": 0.25,
+          "AGG": 0.15,
+          "XIU.TO": 0.05,
+          "GLD": 0.05,
+          "TSLA": 0.1
+        },
+        "weights_total_raw": 1.0,
+        "rounding_correction": null,
+        "requested_period": {
+          "start": "2021-11-12",
+          "end": "2026-11-12"
+        }
+      },
+      "results": {
+        "cumulative_return": 0.3198161561487265,
+        "annualized_volatility": 0.07143178460529408,
+        "max_drawdown": {
+          "value": -0.12233843550849222,
+          "peak_date": "2022-01-04",
+          "trough_date": "2022-12-28"
+        },
+        "largest_position": {
+          "ticker": "ZST.TO",
+          "weight": 0.4,
+          "tied_tickers": [
+            "ZST.TO"
+          ]
+        },
+        "performance_2022": {
+          "year": 2022,
+          "status": "complete",
+          "value": -0.10941215025821593,
+          "start_date": "2021-12-31",
+          "end_date": "2022-12-30",
+          "partial_window_return": null,
+          "partial_window": null,
+          "message": "De 2021-12-31 (dernière valorisation avant 2022) à 2022-12-30."
+        },
+        "asset_metrics": {
+          "ZST.TO": {
+            "status": "ok",
+            "ticker": "ZST.TO",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.1827286047842107,
+            "annualized_volatility": 0.005624547328189228,
+            "max_drawdown": -0.004282831925976671,
+            "max_drawdown_peak_date": "2022-03-01",
+            "max_drawdown_trough_date": "2022-06-30"
+          },
+          "XBB.TO": {
+            "status": "ok",
+            "ticker": "XBB.TO",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.03611412730835051,
+            "annualized_volatility": 0.06754109508182558,
+            "max_drawdown": -0.1547974797578775,
+            "max_drawdown_peak_date": "2021-12-17",
+            "max_drawdown_trough_date": "2022-10-20"
+          },
+          "AGG": {
+            "status": "ok",
+            "ticker": "AGG",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.11689083429782499,
+            "annualized_volatility": 0.07461545865101453,
+            "max_drawdown": -0.12751041239058147,
+            "max_drawdown_peak_date": "2021-12-20",
+            "max_drawdown_trough_date": "2022-06-13"
+          },
+          "XIU.TO": {
+            "status": "ok",
+            "ticker": "XIU.TO",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.8965304096749127,
+            "annualized_volatility": 0.1315803718963348,
+            "max_drawdown": -0.1636012731598746,
+            "max_drawdown_peak_date": "2022-04-04",
+            "max_drawdown_trough_date": "2022-10-12"
+          },
+          "GLD": {
+            "status": "ok",
+            "ticker": "GLD",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 1.3079560950062965,
+            "annualized_volatility": 0.18570586104073064,
+            "max_drawdown": -0.2599925169596916,
+            "max_drawdown_peak_date": "2026-01-28",
+            "max_drawdown_trough_date": "2026-10-30"
+          },
+          "TSLA": {
+            "status": "ok",
+            "ticker": "TSLA",
+            "currency": "CAD",
+            "start_date": "2021-11-12",
+            "end_date": "2026-11-12",
+            "observations": 1228,
+            "periods_per_year": 252,
+            "comparison_basis": "portfolio_common_dates",
+            "cumulative_return": 0.3089758747602602,
+            "annualized_volatility": 0.5938804119775224,
+            "max_drawdown": -0.6980533266767669,
+            "max_drawdown_peak_date": "2021-11-22",
+            "max_drawdown_trough_date": "2023-01-03"
+          }
+        }
+      },
+      "periods": {
+        "requested": {
+          "start": "2021-11-12",
+          "end": "2026-11-12"
+        },
+        "data_coverage_common_dates": {
+          "start": "2021-11-12",
+          "end": "2026-11-12"
+        },
+        "effective": {
+          "start": "2021-11-12",
+          "end": "2026-11-12"
+        },
+        "observations": 1228,
+        "returns": 1227
+      },
+      "checks": {
+        "price_quality": {
+          "ZST.TO": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "XBB.TO": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "AGG": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "XIU.TO": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "GLD": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          },
+          "TSLA": {
+            "raw_rows": 1255,
+            "observations": 1255,
+            "identical_duplicates_removed": 0,
+            "conflicting_duplicates": 0,
+            "invalid_prices": 0
+          }
+        },
+        "fx": {
+          "required": true,
+          "rule": "dernier taux observé à la date de cotation ou avant",
+          "missing_dates": {},
+          "carried_count": 111,
+          "max_age_days": 4,
+          "carried_examples": [
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-27",
+              "rate_date": "2021-12-24",
+              "age_days": 3
+            },
+            {
+              "date": "2021-12-28",
+              "rate_date": "2021-12-24",
+              "age_days": 4
+            },
+            {
+              "date": "2022-01-03",
+              "rate_date": "2021-12-31",
+              "age_days": 3
+            }
+          ]
+        },
+        "alignment": {
+          "common_dates_total": 1228,
+          "dates_excluded_by_ticker": {
+            "ZST.TO": 27,
+            "XBB.TO": 27,
+            "AGG": 27,
+            "XIU.TO": 27,
+            "GLD": 27,
+            "TSLA": 27
+          },
+          "has_crypto": false,
+          "convention": "Les rendements sont calculés entre dates de cotation communes à tous les actifs (jours où chaque actif a un prix valide et où un taux de change est disponible, si requis). Pour un portefeuille mixte, les cryptoactifs sont donc observés aux dates boursières communes; leur variation entre deux de ces dates (week-end inclus) est conservée : le prix du lundi est comparé à celui du vendredi. Les dates de week-end ne sont pas des points de calcul. Un portefeuille 100 % cryptoactifs utilise tous les jours civils communs."
+        },
+        "annualization": {
+          "periods_per_year": 252,
+          "convention": "252 observations par an (calendrier boursier; dates communes aux actifs boursiers)",
+          "observed_observations_per_year": 245.43359802847755,
+          "weights_total_after_correction": 1.0
+        },
+        "quality_warnings_file": {
+          "path": "data/data_quality_warnings.txt",
+          "present": false,
+          "error": null,
+          "relevant": []
+        }
+      },
+      "sources": [
+        {
+          "file": "prices_daily.csv",
+          "available": true,
+          "source": "Yahoo Finance via the open-source yfinance Python library",
+          "source_url": "https://finance.yahoo.com",
+          "retrieved_on": "2026-11-13",
+          "coverage": "2021-11-12 to 2026-11-12",
+          "frequency": "daily (trading days per market; crypto 7 days/week)",
+          "processing": "No forward-fill; no calendar alignment; rows only on days Yahoo reports a price; prices in the asset's listing currency",
+          "limitations": "adj_close is back-adjusted for splits and dividends so values shift when data is re-downloaded; crypto rows are UTC calendar days; Yahoo data is not exchange-certified",
+          "terms_of_use": "Yahoo terms: https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html (retrieved 2026-11-13)",
+          "missing_fields": [],
+          "message": ""
+        },
+        {
+          "file": "assets_universe.csv",
+          "available": true,
+          "source": "Compiled by organizers; sector labels follow GICS sector names",
+          "source_url": "n/a",
+          "retrieved_on": "2026-11-13",
+          "coverage": "n/a",
+          "frequency": "static",
+          "processing": "Hand-curated selection",
+          "limitations": "Sector labels are organizer-assigned and simplified; ETF 'sector' describes exposure; not an official classification",
+          "terms_of_use": "Free to use within the datathon",
+          "missing_fields": [
+            "source_url",
+            "coverage"
+          ],
+          "message": "Information manquante dans data/sources_metadata.csv : source_url, coverage"
+        },
+        {
+          "file": "fx_usdcad_daily.csv",
+          "available": true,
+          "source": "Bank of Canada Valet API series FXUSDCAD",
+          "source_url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json",
+          "retrieved_on": "2026-11-13",
+          "coverage": "2021-11-12 to 2026-11-12",
+          "frequency": "business daily (Canadian business days)",
+          "processing": "cadusd = 1/usdcad rounded to 6 decimals",
+          "limitations": "Single daily rate published around 16:30 ET; no rate on Canadian holidays",
+          "terms_of_use": "Bank of Canada terms: https://www.bankofcanada.ca/terms/",
+          "missing_fields": [],
+          "message": ""
+        }
+      ],
+      "errors": [],
+      "warnings": [
+        "Le fichier data/data_quality_warnings.txt est absent; aucun avertissement de qualité examiné."
+      ],
+      "assumptions": [
+        "Prix : adj_close (ajusté pour fractionnements et dividendes), sans réajustement.",
+        "Les rendements sont calculés entre dates de cotation communes à tous les actifs (jours où chaque actif a un prix valide et où un taux de change est disponible, si requis). Pour un portefeuille mixte, les cryptoactifs sont donc observés aux dates boursières communes; leur variation entre deux de ces dates (week-end inclus) est conservée : le prix du lundi est comparé à celui du vendredi. Les dates de week-end ne sont pas des points de calcul. Un portefeuille 100 % cryptoactifs utilise tous les jours civils communs.",
+        "Change : les valeurs de chaque actif sont converties dans la devise de référence avant le calcul des rendements, avec le dernier taux USD/CAD de la Banque du Canada observé à la date de cotation ou avant (aucune observation postérieure n'est utilisée). USD vers CAD : multiplication par usdcad; CAD vers USD : division par usdcad. Une date sans aucun taux disponible est exclue et signalée.",
+        "Rééquilibrage à chaque observation : les poids cibles sont rétablis à chaque date commune; le rendement du portefeuille est la somme pondérée des rendements des actifs.",
+        "Frais de transaction, de gestion et impôts exclus.",
+        "Annualisation : 252 observations par an pour un portefeuille contenant au moins un actif boursier (calendrier boursier commun), 365 pour un portefeuille 100 % cryptoactifs. Volatilité = écart-type échantillonnal des rendements du portefeuille x racine du nombre de périodes.",
+        "Poids : fractions ou pourcentages en chaîne (« 25.00% »). Seule correction permise : un total à 0,05 point de pourcentage ou moins de 100 % est ramené à 100 % par division proportionnelle, et la correction est signalée. Tout autre écart est refusé.",
+        "Performance 2022 : point de départ = dernière valorisation commune avant le 1er janvier 2022; calculée sur toutes les données disponibles, indépendamment de la période demandée."
+      ],
+      "limitations": [
+        "Résultats historiques sur la période étudiée; ni prévisions ni conseils en placement.",
+        "Le rééquilibrage à chaque observation est une idéalisation : un portefeuille réel qui ne rééquilibre pas obtiendrait des résultats différents.",
+        "Les dates communes excluent les jours où l'un des actifs ne cote pas (jours fériés TSX/États-Unis, week-ends); la volatilité du portefeuille reflète donc des intervalles parfois de plus d'un jour, annualisés avec une convention fixe de 252 ou 365.",
+        "Le taux de la Banque du Canada est publié une fois par jour (vers 16 h 30 HE) et n'est pas synchronisé avec la clôture de chaque marché; les jours fériés canadiens utilisent le dernier taux antérieur.",
+        "Frais, impôts, écarts de conversion réels et dividendes réinvestis autrement que par adj_close non modélisés.",
+        "Biais du survivant : l'univers a été choisi en 2026 parmi des titres aujourd'hui importants.",
+        "adj_close est ajusté rétroactivement depuis la date de téléchargement; les valeurs anciennes changent lors d'un nouveau téléchargement.",
+        "Seules les devises CAD et USD sont prises en charge."
+      ],
+      "min_obs_note": "Le nombre minimal d'observations communes est un seuil technique configurable (--min-obs); il ne garantit pas la fiabilité statistique des indicateurs."
+    },
+    "check": {
+      "status": "checked",
+      "valid": true,
+      "conclusion": "no_violation_found_among_verifiable_constraints",
+      "conclusion_message": "Aucune violation détectée parmi les contraintes vérifiables; des éléments restent impossibles à vérifier, donc aucune conformité globale n'est affirmée.",
+      "violations": [],
+      "tensions": [
+        {
+          "category": "tension",
+          "code": "position_drawdown_deeper_than_portfolio",
+          "field": "objective",
+          "message": "À discuter (objectif déclaré de préservation du capital) : TSLA (poids 10.00 %) a connu une baisse maximale de -69.81 % entre le 2021-11-22 et le 2023-01-03, contre -12.23 % pour l'ensemble du portefeuille, sur les mêmes dates d'observation et en CAD. Les sommets et creux peuvent survenir à des dates différentes : cette comparaison n'est pas une contribution à la baisse du portefeuille. La diversification peut expliquer une baisse moins forte du portefeuille; cet écart ne prouve pas une inadéquation. Un profil qui cherche à préserver le capital invite à examiner la taille de cette position, son rôle dans le portefeuille et la capacité à supporter une baisse comparable. Ce n'est ni une interdiction ni une règle violée, aucun seuil n'étant défini, et le passé ne prédit pas l'avenir. Autres positions à baisse maximale plus profonde que celle du portefeuille : GLD (-26.00 %, poids 5.00 %); XIU.TO (-16.36 %, poids 5.00 %); XBB.TO (-15.48 %, poids 25.00 %); AGG (-12.75 %, poids 15.00 %).",
+          "evidence": [
+            {
+              "source": "profile.objective",
+              "value": "capital_preservation"
+            },
+            {
+              "source": "review.results.max_drawdown",
+              "value": -0.12233843550849222
+            },
+            {
+              "source": "review.results.asset_metrics",
+              "ticker": "TSLA",
+              "weight": 0.1,
+              "max_drawdown": -0.6980533266767669,
+              "peak_date": "2021-11-22",
+              "trough_date": "2023-01-03",
+              "cumulative_return": 0.3089758747602602,
+              "currency": "CAD",
+              "window": [
+                "2021-11-12",
+                "2026-11-12"
+              ]
+            },
+            {
+              "source": "review.results.asset_metrics",
+              "ticker": "GLD",
+              "weight": 0.05,
+              "max_drawdown": -0.2599925169596916,
+              "peak_date": "2026-01-28",
+              "trough_date": "2026-10-30",
+              "cumulative_return": 1.3079560950062965,
+              "currency": "CAD",
+              "window": [
+                "2021-11-12",
+                "2026-11-12"
+              ]
+            },
+            {
+              "source": "review.results.asset_metrics",
+              "ticker": "XIU.TO",
+              "weight": 0.05,
+              "max_drawdown": -0.1636012731598746,
+              "peak_date": "2022-04-04",
+              "trough_date": "2022-10-12",
+              "cumulative_return": 0.8965304096749127,
+              "currency": "CAD",
+              "window": [
+                "2021-11-12",
+                "2026-11-12"
+              ]
+            },
+            {
+              "source": "review.results.asset_metrics",
+              "ticker": "XBB.TO",
+              "weight": 0.25,
+              "max_drawdown": -0.1547974797578775,
+              "peak_date": "2021-12-17",
+              "trough_date": "2022-10-20",
+              "cumulative_return": 0.03611412730835051,
+              "currency": "CAD",
+              "window": [
+                "2021-11-12",
+                "2026-11-12"
+              ]
+            },
+            {
+              "source": "review.results.asset_metrics",
+              "ticker": "AGG",
+              "weight": 0.15,
+              "max_drawdown": -0.12751041239058147,
+              "peak_date": "2021-12-20",
+              "trough_date": "2022-06-13",
+              "cumulative_return": 0.11689083429782499,
+              "currency": "CAD",
+              "window": [
+                "2021-11-12",
+                "2026-11-12"
+              ]
+            }
+          ]
+        }
+      ],
+      "unverifiable": [
+        {
+          "category": "unverifiable",
+          "code": "exclusions_unknown",
+          "field": "exclusions",
+          "message": "Exclusions inconnues : impossible de vérifier le respect d'exclusions.",
+          "evidence": [
+            {
+              "source": "validate_profile.missing",
+              "field": "exclusions"
+            }
+          ]
+        },
+        {
+          "category": "unverifiable",
+          "code": "crypto_preference_unknown",
+          "field": "crypto_preference",
+          "message": "Préférence crypto inconnue : impossible de vérifier.",
+          "evidence": [
+            {
+              "source": "validate_profile.missing",
+              "field": "crypto_preference"
+            }
+          ]
+        },
+        {
+          "category": "unverifiable",
+          "code": "esg_preference_unknown",
+          "field": "esg_preference",
+          "message": "Préférence ESG inconnue : impossible de vérifier.",
+          "evidence": [
+            {
+              "source": "validate_profile.missing",
+              "field": "esg_preference"
+            }
+          ]
+        },
+        {
+          "category": "unverifiable",
+          "code": "volatility_limit_undefined",
+          "field": "risk_tolerance",
+          "message": "Tolérance au risque qualitative sans seuil de volatilité fourni : la volatilité observée (7.14 %) ne peut pas être comparée à une limite. Aucune limite n'est déduite de l'horizon.",
+          "evidence": [
+            {
+              "source": "profile.risk_tolerance",
+              "value": {
+                "min": "low",
+                "max": "medium"
+              }
+            },
+            {
+              "source": "review.results.annualized_volatility",
+              "value": 0.07143178460529408
+            }
+          ]
+        },
+        {
+          "category": "unverifiable",
+          "code": "objective_alignment_undefined",
+          "field": "objective",
+          "message": "Adéquation à l'objectif non vérifiable : aucun critère chiffré n'est associé à l'objectif.",
+          "evidence": [
+            {
+              "source": "profile.objective",
+              "value": "capital_preservation"
+            }
+          ]
+        }
+      ],
+      "satisfied": [
+        {
+          "category": "satisfied",
+          "code": "requested_ticker_held",
+          "field": "requested_tickers",
+          "message": "Titre demandé présent : TSLA.",
+          "evidence": [
+            {
+              "source": "profile.requested_tickers",
+              "value": "TSLA"
+            },
+            {
+              "source": "review.inputs.weights",
+              "ticker": "TSLA",
+              "weight": 0.1
+            }
+          ]
+        }
+      ],
+      "notes": [
+        "Tolérance au risque fournie sous forme de fourchette (de faible à moyenne) : conservée telle quelle, sans valeur unique choisie.",
+        "Horizon fourni (de 3 à 5 ans) : il n'est utilisé pour déduire aucune interdiction ni aucune limite de volatilité.",
+        "Le rapport de revue contient 1 avertissement(s) à consulter.",
+        "Profil incomplet : knowledge, crypto_preference, esg_preference, exclusions restent inconnus."
+      ],
+      "errors": [],
+      "profile_check": {
+        "status": "incomplete",
+        "missing": [
+          "knowledge",
+          "crypto_preference",
+          "esg_preference",
+          "exclusions"
+        ]
+      }
+    }
+  }
+]

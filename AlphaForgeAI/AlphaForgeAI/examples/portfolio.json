@@ -1,0 +1,12 @@
+{
+  "description": "PORTEFEUILLE EXPLICITEMENT FICTIF, à des fins de démonstration seulement. Ne représente aucun client réel et ne constitue pas un conseil en placement.",
+  "portfolio": {
+    "RY.TO": "30.00%",
+    "AAPL": "25.00%",
+    "XBB.TO": 0.25,
+    "GLD": "15.00%",
+    "BTC-USD": "5.00%"
+  },
+  "reference_currency": "CAD",
+  "period": {"start": "2021-11-12", "end": "2026-11-12"}
+}

@@ -1,0 +1,25 @@
+{
+  "description": "EXEMPLE FICTIF : persona Robert, pour tester les contrôles. Aucune personne ni aucun portefeuille réels; pas un conseil en placement. Horizon « 3 à 5 ans » et risque « faible à modéré » conservés comme fourchettes, sans valeur unique choisie. TSLA est un titre demandé.",
+  "profile": {
+    "objective": "capital_preservation",
+    "horizon_years": "3-5",
+    "requested_tickers": [
+      "TSLA"
+    ],
+    "risk_tolerance": "low_to_medium"
+  },
+  "portfolio": {
+    "ZST.TO": "40.00%",
+    "XBB.TO": "25.00%",
+    "AGG": "15.00%",
+    "XIU.TO": "5.00%",
+    "GLD": "5.00%",
+    "TSLA": "10.00%"
+  },
+  "fictional": true,
+  "reference_currency": "CAD",
+  "period": {
+    "start": "2021-11-12",
+    "end": "2026-11-12"
+  }
+}

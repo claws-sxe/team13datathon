@@ -1,0 +1,27 @@
+{
+  "description": "EXEMPLE FICTIF : persona Amira, pour tester les contrôles. Aucune personne ni aucun portefeuille réels; pas un conseil en placement. Horizon « 15 ans ou plus » conservé comme fourchette ouverte. Connaissances, préférence ESG, exclusions et titres demandés non précisés : laissés inconnus.",
+  "profile": {
+    "objective": "growth",
+    "horizon_years": "15 ans ou plus",
+    "risk_tolerance": "high",
+    "crypto_preference": "open"
+  },
+  "portfolio": {
+    "AAPL": "15.00%",
+    "MSFT": "10.00%",
+    "NVDA": "10.00%",
+    "QQQ": "15.00%",
+    "BTC-USD": "8.00%",
+    "ETH-USD": "4.00%",
+    "XIU.TO": "12.00%",
+    "XBB.TO": "10.00%",
+    "GLD": "8.00%",
+    "JNJ": "8.00%"
+  },
+  "fictional": true,
+  "reference_currency": "CAD",
+  "period": {
+    "start": "2021-11-12",
+    "end": "2026-11-12"
+  }
+}

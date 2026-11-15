@@ -1,0 +1,24 @@
+{
+  "description": "EXEMPLE FICTIF : persona Mateo, pour tester les contrôles. Aucune personne ni aucun portefeuille réels; pas un conseil en placement. Horizon « 8 à 12 ans » conservé comme fourchette. « Préférences ESG » interprétées comme « preferred » (préféré), pas « required ». Préférence crypto, exclusions et titres demandés non précisés : laissés inconnus.",
+  "profile": {
+    "objective": "balanced_growth",
+    "horizon_years": "8-12",
+    "risk_tolerance": "medium",
+    "esg_preference": "preferred"
+  },
+  "portfolio": {
+    "ESGV": "30.00%",
+    "XIU.TO": "15.00%",
+    "RY.TO": "10.00%",
+    "XBB.TO": "20.00%",
+    "AGG": "10.00%",
+    "JNJ": "5.00%",
+    "GLD": "10.00%"
+  },
+  "fictional": true,
+  "reference_currency": "CAD",
+  "period": {
+    "start": "2021-11-12",
+    "end": "2026-11-12"
+  }
+}
