@@ -6,6 +6,7 @@ import Portfolio from "./components/Portfolio";
 import Alerts from "./components/Alerts";
 import Trace from "./components/Trace";
 import { getSuggestions } from "./suggestions";
+import { nextResult, resetResult } from "./portfolioState";
 import "./App.css";
 
 const WELCOME = {
@@ -34,17 +35,18 @@ export default function App() {
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant")?.content;
   const suggestions = getSuggestions(lastAssistant, result?.suggestions);
 
-  async function send(text, history = messages) {
+  async function send(text, history = messages, sid = sessionId) {
     const next = [...history, { role: "user", content: text }];
     setMessages(next);
     setLoading(true);
     setError(null);
     try {
-      const res = await sendMessage({ session_id: sessionId, messages: next });
+      const res = await sendMessage({ session_id: sid, messages: next });
       // Réponse vide (ex. seulement des données de profil) : pas de bulle vide dans le chat
       if (res.reply) setMessages([...next, { role: "assistant", content: res.reply }]);
-      // On garde ce qu'on savait déjà du profil si la nouvelle réponse n'en parle pas
-      setResult((prev) => ({ ...res, profile: res.profile ? { ...prev?.profile, ...res.profile } : prev?.profile ?? null }));
+      // Profil : on garde ce qu'on savait si la réponse n'en parle pas. Portefeuille accepté et métriques : gardés
+      // pendant les questions de suivi, remplacés par un nouveau build réussi, effacés par un conflit (voir portfolioState.js)
+      setResult((prev) => nextResult(prev, res));
     } catch (e) {
       setError(e.message);
     } finally {
@@ -54,15 +56,16 @@ export default function App() {
 
   function pickPersona(name) {
     // Nouvelle session pour chaque persona, pour que les profils ne se mélangent pas
-    setSessionId(newSession());
-    setResult(null);
-    send(PERSONAS[name], [WELCOME]);
+    const sid = newSession();
+    setSessionId(sid);
+    setResult(resetResult());
+    send(PERSONAS[name], [WELCOME], sid); // sid explicite : l'état React n'est pas encore à jour
   }
 
   function reset() {
     setSessionId(newSession());
     setMessages([WELCOME]);
-    setResult(null);
+    setResult(resetResult());
     setError(null);
   }
 

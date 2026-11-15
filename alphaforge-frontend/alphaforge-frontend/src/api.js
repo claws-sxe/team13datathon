@@ -20,6 +20,7 @@ export async function sendMessage({ session_id, messages }) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      session_id, // même identifiant = même conversation côté serveur; nouveau à chaque « Recommencer »
       user_message: last.content,
       chat_history: messages.slice(0, -1).map(({ role, content }) => ({ role, content })),
     }),
@@ -198,5 +199,9 @@ function normalize(data) {
     alerts: normalizeAlerts(d.alerts),
     trace: normalizeTrace(d.trace),
     suggestions: Array.isArray(d.suggestions) ? d.suggestions.map(String) : null,
+    // Contrôles et preuves de l'agent, conservés tels quels pour affichage ou débogage
+    status: d.status,
+    checks: d.checks ?? null,
+    evidence: d.evidence ?? null,
   };
 }
