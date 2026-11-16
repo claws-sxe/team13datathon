@@ -543,7 +543,14 @@ def process_turn(user_message, state, pending=None, compare=None, chat_history=N
         compare = None
     if compare and compare.get("turn") != (state or {}).get("turn_count", 0):
         compare = None  # la question « quels placements ? » n'est plus la dernière : on n'attend plus de réponse
-    handled = _compare_turn(user_message, state, compare, ag._data())
+    data = ag._data()
+    if vis.is_simple_drawdown_question(user_message, data):
+        # Explication fixe + exemple fictif 100 $ -> 80 $ -> 90 $ : la même réponse que le graphique, validée par les
+        # garde-fous et enregistrée telle quelle dans l'historique (aucun chiffre laissé au modèle).
+        body, new_state = _guide_body(state, user_message, vis.DRAWDOWN_TEACHING_REPLY, route="teaching_example",
+                                      chart=vis.drawdown_example_chart())
+        return body, new_state, pending, None
+    handled = _compare_turn(user_message, state, compare, data)
     if handled is not None:
         body, new_state, compare = handled
         return body, new_state, pending, compare

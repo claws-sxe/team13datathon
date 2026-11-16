@@ -499,17 +499,35 @@ def asset_chart(analysis, data, focus="drawdown"):
 # -------------------------------------------------------- illustration fictive
 _TEACH = re.compile(r"c['’]est quoi|qu['’]est[- ]ce|explique\w*|comprendre|signifie|veut dire|d[ée]finition|"
                     r"\bce qu['’]est\b", re.I)
-# Texte ajouté à la réponse : la même illustration que le graphique, étiquetée comme fictive (une seule phrase, pour que
-# le garde-fou des pourcentages reconnaisse le scénario hypothétique).
+# Exemple fictif, décrit avec les mêmes chiffres que le graphique (100 $ -> 80 $ -> 90 $). Le premier pourcentage du
+# paragraphe suit la mention « Exemple fictif » dans la même phrase : c'est ainsi que le garde-fou des pourcentages
+# reconnaît un scénario illustratif (il reste actif pour tout autre pourcentage).
 DRAWDOWN_EXAMPLE_TEXT = ("Exemple fictif (illustré ci-dessous) : un placement passe de 100 $ à 80 $, puis remonte à 90 $, "
-                         "soit une baisse maximale de 20 % entre le sommet de 100 $ et le creux de 80 $; le rebond à 90 $ "
-                         "ne l'efface pas.")
+                         "et sa baisse maximale est de 20 %, soit le recul de 20 $ entre le sommet de 100 $ et le creux de "
+                         "80 $. Même si le placement est ensuite remonté à 90 $, la baisse maximale reste de 20 %.")
+DRAWDOWN_DEFINITION = ("La baisse maximale est le plus grand recul de la valeur d'un placement entre un sommet et le creux "
+                       "qui le suit, sur une période donnée. Elle indique la pire perte qu'aurait subie une personne ayant "
+                       "acheté au sommet et vendu au creux. Une remontée ultérieure ne l'efface pas.")
+DRAWDOWN_TEACHING_REPLY = DRAWDOWN_DEFINITION + "\n\n" + DRAWDOWN_EXAMPLE_TEXT
 _DRAWDOWN_TOPIC = re.compile(r"baisse maximale|drawdown|recul maximal", re.I)
+_OTHER_NOTIONS = re.compile(r"volatil|rendement|diversif|sharpe|sortino|correl|inflation|taux|fnb|etf|obligation|"
+                            r"crypto|horizon|risque|dividende|frais|compar|calcul|\bet\b.*\?", re.I)
 
 
 def wants_drawdown_illustration(message, data):
     """Question d'apprentissage sur la baisse maximale, sans placement nommé (sinon c'est une question historique)."""
     return bool(message and _TEACH.search(message) and _DRAWDOWN_TOPIC.search(message) and not find_assets(message, data))
+
+
+def is_simple_drawdown_question(message, data):
+    """Demande simple d'explication de la baisse maximale (« Pouvez-vous m'expliquer ce qu'est la baisse maximale ? »,
+    « C'est quoi un drawdown ? ») : réponse pédagogique fixe avec l'exemple fictif, sans dépendre du modèle.
+    Une question qui nomme un placement (données réelles), donne ses propres chiffres ou mêle une autre notion
+    reste traitée par l'agent."""
+    if not isinstance(message, str) or not wants_drawdown_illustration(message, data):
+        return False
+    low = norm(message)
+    return not re.search(r"\d", low) and not _OTHER_NOTIONS.search(low) and len(message.split()) <= 20
 
 
 def drawdown_example_chart():

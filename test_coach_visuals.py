@@ -346,3 +346,110 @@ def lambda_module():
     with mock.patch("boto3.client"):
         import lambda_function  # noqa: F401
     return sys.modules["lambda_function"]
+
+
+# ===================== EC2 : « Pouvez-vous m'expliquer ce qu'est la baisse maximale ? »
+# Le modèle réel répondait sans outil, avec un exemple chiffré non étiqueté : le garde-fou des pourcentages rejetait la
+# réponse (avertissement, aucun graphique). L'ancien agent factice donnait une définition sans chiffre et masquait le cas.
+import coach_visuals as vis  # noqa: E402
+
+DRAWDOWN_Q = "Pouvez-vous m'expliquer ce qu'est la baisse maximale ?"
+
+
+def bedrock_like(text):
+    """Comme sur EC2 : aucun appel d'outil, exemple chiffré sans mention « Exemple fictif » ni « Scénario hypothétique »."""
+    return [], lambda r: ("La baisse maximale mesure le plus grand recul entre un sommet et un creux. Par exemple, si un "
+                          "placement passe de 100 $ à 70 $ puis remonte à 85 $, sa baisse maximale est de 30 %.")
+
+
+def assert_teaching_example(env, body, sid, question):
+    assert env.spy.call_count == 0  # le modèle n'est pas sollicité : aucun chiffre ne dépend de lui
+    assert body["route"] == "teaching_example" and body["status"] == "ok" and body["triggered"] is False
+    reply = body["reply"]
+    assert reply == vis.DRAWDOWN_TEACHING_REPLY and mh._REPLIES["needs_review"] not in reply
+    assert reply.startswith("La baisse maximale est le plus grand recul")
+    for part in ("Exemple fictif", "de 100 $ à 80 $", "remonte à 90 $", "baisse maximale est de 20 %",
+                 "entre le sommet de 100 $ et le creux de 80 $", "remonté à 90 $, la baisse maximale reste de 20 %"):
+        assert part in reply, part
+    chart = body["chart"]
+    assert chart["kind"] == "example" and chart["fictional"] is True and chart["title"] == "Exemple fictif : 100 $ → 80 $ → 90 $"
+    v = chart["variants"]["$"]
+    assert v["series"][0]["values"] == [100, 80, 90] and v["metrics"][0]["max_drawdown"] == -0.2
+    assert [(m["type"], m["value"]) for m in v["marks"]] == [("peak", 100), ("trough", 80)]
+    guards = {g["name"]: g["passed"] for g in body["checks"]["reply_guards"]}
+    assert guards == {"french_language": True, "no_conformity_claim_without_valid_conclusion": True,
+                      "percentages_supported_by_inputs_or_tools": True}  # garde-fous réels, actifs et réussis
+    assert body["checks"]["tools"] == [] and body["evidence"]["actions"] == []  # rien n'est présenté comme calculé
+    msgs = app_module.SESSIONS.get(sid)["messages"]
+    assert msgs[-2] == {"role": "user", "content": [{"text": question}]}
+    assert msgs[-1] == {"role": "assistant", "content": [{"text": reply}]}  # la même réponse dans l'historique
+    assert env.engine.invoke.call_count == 0
+
+
+@pytest.mark.parametrize("question", [DRAWDOWN_Q, "Pouvez-vous m’expliquer ce qu’est la baisse maximale ?",
+                                      "C'est quoi la baisse maximale ?", "Qu'est-ce qu'un drawdown ?"])
+def test_ec2_regression_typed_drawdown_explanation_uses_the_fictional_example(venv, monkeypatch, question):
+    monkeypatch.setattr(base, "script", bedrock_like)
+    draft = bedrock_like(question)[1]([])
+    rejected = {g["name"]: g["passed"] for g in mh.reply_guards(draft, question, [], None)}
+    assert rejected["percentages_supported_by_inputs_or_tools"] is False  # la réponse du modèle aurait été rejetée
+    sid = "ec2-dd-" + str(abs(hash(question)))[:10]
+    body = venv.post(question, sid)
+    assert_teaching_example(venv, body, sid, question)
+
+
+def test_ec2_regression_drawdown_topic_through_the_guide(venv, monkeypatch):
+    monkeypatch.setattr(base, "script", bedrock_like)
+    sid = "ec2-dd-guide-0001"
+    body = venv.post("Je voudrais comprendre une notion.", sid)
+    chip = next(c for c in body["suggestions"] if c["label"] == "Baisse maximale")
+    assert chip["message"] == DRAWDOWN_Q  # le bouton envoie exactement la question qui échouait
+    body = venv.post(chip["message"], sid)
+    assert_teaching_example(venv, body, sid, DRAWDOWN_Q)
+    texts = [m["content"][0]["text"] for m in app_module.SESSIONS.get(sid)["messages"]]
+    assert texts == ["Je voudrais comprendre une notion.", vis.LEARN_QUESTION, DRAWDOWN_Q, body["reply"]]
+
+
+def test_ec2_regression_pending_portfolio_survives_the_teaching_example(venv, monkeypatch):
+    monkeypatch.setattr(base, "script", bedrock_like)
+    sid = "ec2-dd-pending-01"
+    venv.post("Je veux que vous me fassiez un portefeuille", sid)
+    venv.post("15 ans et plus", sid)
+    body = venv.post(DRAWDOWN_Q, sid)
+    assert body["route"] == "teaching_example" and app_module.SESSIONS.get_pending(sid)["confirm"]["value"] == 15
+
+
+def test_teaching_reply_is_still_checked_for_unsupported_percentages(venv, monkeypatch):
+    monkeypatch.setattr(vis, "DRAWDOWN_TEACHING_REPLY", vis.DRAWDOWN_TEACHING_REPLY + "\n\nPour Tesla, elle a été de 55 %.")
+    sid = "ec2-dd-guarded-01"
+    body = venv.post(DRAWDOWN_Q, sid)
+    assert body["status"] == "needs_review" and "chart" not in body and "55 %" not in body["reply"]
+    assert app_module.SESSIONS.get(sid)["messages"][-1]["content"][0]["text"] == body["reply"]
+
+
+def test_named_asset_drawdown_questions_stay_on_the_real_data_path(venv):
+    body = venv.post("Pouvez-vous m'expliquer la baisse maximale de Tesla ?", "real-dd-tsla-0001")
+    assert venv.spy.call_count == 1 and body["route"] == "handle_message"
+    assert body["chart"]["kind"] == "price" and body["chart"]["fictional"] is False
+    m = body["chart"]["variants"]["USD"]["metrics"][0]
+    assert (round(m["max_drawdown"], 4), m["peak_date"], m["trough_date"]) == (-0.7297, "2022-01-03", "2023-01-03")
+
+
+@pytest.mark.parametrize("question", ["De combien Tesla a-t-elle baissé ?",
+                                      "Pouvez-vous m'expliquer la baisse maximale de Tesla ?"])
+def test_unsupported_percentage_about_a_real_asset_gives_no_chart(venv, monkeypatch, question):
+    monkeypatch.setattr(base, "script", lambda t: ([("analyze_asset", {"ticker": "TSLA"})],
+                                                   lambda r: "La baisse maximale de Tesla a été de 55 %."))
+    sid = "real-dd-bad-" + str(abs(hash(question)))[:6]
+    body = venv.post(question, sid)
+    assert venv.spy.call_count == 1 and body["route"] == "handle_message"
+    assert body["status"] == "needs_review" and "chart" not in body and "55 %" not in body["reply"]
+    assert app_module.SESSIONS.get(sid)["messages"][-1]["content"][0]["text"] == body["reply"]
+
+
+def test_mixed_drawdown_question_stays_with_the_agent(venv, monkeypatch):
+    """Une question qui mêle une autre notion n'est pas remplacée par la réponse fixe."""
+    monkeypatch.setattr(base, "script", bedrock_like)
+    body = venv.post("Pouvez-vous m'expliquer la baisse maximale et la volatilité ?", "mixed-dd-000001")
+    assert venv.spy.call_count == 1 and body["route"] == "handle_message" and body["status"] == "needs_review"
+    assert "chart" not in body
