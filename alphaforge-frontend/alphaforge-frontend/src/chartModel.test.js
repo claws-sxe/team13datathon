@@ -43,12 +43,12 @@ test("comparaison : la devise par défaut est CAD, les deux courbes partent de 1
 test("lisible sans survol : repères, message principal et texte alternatif", () => {
   const c = normalizeChart(compare);
   const v = c.variants.CAD;
-  assert.equal(keyPoints(c, v)[1].text, "Creux de Tesla (TSLA) : 2023-01-03, 33,2 (base 100)");
+  assert.equal(keyPoints(c, v)[1].text, "Creux de Tesla (TSLA) : 2023-01-03, 33,2 (base\u00a0100)");
   const t = takeaways(c, v);
   assert.equal(t[0], "Sur cette période, Tesla (TSLA) a le plus baissé.");
-  assert.equal(t[1], "Tesla (TSLA) : baisse maximale de −69,81 % (du 2021-11-22 au 2023-01-03).");
-  assert.match(altText(c, v), /En CAD, du 2021-11-12 au 2026-11-12 \(1228 observations\)/);
-  assert.equal(fmtDrop(-0.2), "−20,00 %");
+  assert.equal(t[1], "Tesla (TSLA) : baisse maximale de −69,81\u00a0%.");
+  assert.match(altText(c, v), /Baisses maximales en CAD, du 2021-11-12 au 2026-11-12 \(1228 dates communes\)/);
+  assert.equal(fmtDrop(-0.2), "−20,00\u00a0%"); // espace insécable : jamais coupé en fin de ligne
 });
 
 test("exemple fictif : étiqueté, 100 $ → 80 $ → 90 $, baisse de 20 % marquée", () => {
@@ -58,8 +58,8 @@ test("exemple fictif : étiqueté, 100 $ → 80 $ → 90 $, baisse de 20 % marqu
       metrics: [{ id: "ex", label: "Placement fictif", max_drawdown: -0.2, peak_date: "Départ", trough_date: "Creux" }], period: null } } });
   assert.equal(c.fictional, true);
   const g = geometry(c, c.variants.$);
-  assert.equal(g.bracket.label, "−20,00 %");
+  assert.equal(g.bracket.label, "−20,00\u00a0%");
   assert.deepEqual(g.xTicks.map((t) => t.label), ["Départ", "Creux", "Rebond"]);
-  assert.match(takeaways(c, c.variants.$)[0], /100 \$ au creux de 80 \$; le rebond à 90 \$/);
+  assert.match(takeaways(c, c.variants.$)[0], /100\u00a0\$ au creux de 80\u00a0\$; le rebond à 90\u00a0\$/);
   assert.match(altText(c, c.variants.$), /^Exemple fictif\./);
 });

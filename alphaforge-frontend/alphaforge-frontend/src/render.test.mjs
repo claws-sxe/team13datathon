@@ -86,11 +86,16 @@ test("le graphique de comparaison est lisible sans survol : devise, dates, repè
   const s = visible(html(m.Chart, { chart: res.chart }));
   assert.match(s, /aria-pressed="true"[^>]*>CAD</);
   assert.match(s, />USD</);
-  for (const t of ["Sur cette période, Tesla (TSLA) a le plus baissé.", "−69,81 %", "du 2021-11-22 au 2023-01-03",
-                   "Creux de Tesla (TSLA) : 2023-01-03", "En CAD, du 2021-11-12 au 2026-11-12 (1228 observations)",
+  for (const t of ["Sur cette période, Tesla (TSLA) a le plus baissé.", "−69,81\u00a0%", "−21,02\u00a0%",
+                   "Sommet de Tesla (TSLA) : 2021-11-22", "Creux de Tesla (TSLA) : 2023-01-03",
+                   "Baisses maximales en CAD, du 2021-11-12 au 2026-11-12 (1228 dates communes)",
                    "Source : prix : Yahoo Finance", "Tesla (TSLA)", "Royal Bank of Canada (RY.TO)"]) {
     assert.ok(s.includes(t), t);
   }
+  // devise et baisses AVANT la liste détaillée des sommets et creux
+  assert.ok(s.indexOf("chart-summary") < s.indexOf("chart-points"));
+  assert.ok(s.indexOf("Baisses maximales en CAD") < s.indexOf("Sommet de Tesla"));
+  assert.ok(s.indexOf("−21,02\u00a0%") < s.indexOf("Sommet de Tesla"));
 });
 
 test("l'exemple fictif porte son étiquette", () => {
@@ -100,7 +105,8 @@ test("l'exemple fictif porte son étiquette", () => {
       metrics: [{ id: "ex", label: "Placement fictif", max_drawdown: -0.2 }], period: null } } });
   const s = html(m.Chart, { chart });
   assert.match(s, /class="badge">Exemple fictif</);
-  assert.match(s, /−20,00 %/);
+  assert.match(s, /−20,00\u00a0%/);
+  assert.match(s, /class="halo"/);
 });
 
 test("portefeuille : étiquettes exactes et barres de la largeur de la part réelle", async () => {

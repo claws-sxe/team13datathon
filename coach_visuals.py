@@ -496,6 +496,79 @@ def asset_chart(analysis, data, focus="drawdown"):
             "source": source_line(analysis.get("sources") or [{"file": "prices_daily.csv"}]), "fictional": False}
 
 
+# ------------------------------------------- question explicite sur UN placement
+_WHY = re.compile(r"\bpourquoi\b|\bcause|\braison|expliqu|\bcomment\b|\bfaut-il\b|\bdevrais|\bconseil|acheter|vendre|"
+                  r"portefeuille|profil|\bvs\b|versus|compar|\bou\b", re.I)
+_DD_ASK = re.compile(r"(?:de\s+)?combien\b.*\b(?:baiss|chut|perdu|recul|plong)|"
+                     r"\b(?:baiss|chut|perdu|recul|plong)\w*\b.*\b(?:au\s+)?maximum\b|"
+                     r"(?:plus\s+(?:forte?|grande?|grosse)|pire)\s+(?:baisse|chute|perte|recul)|"
+                     r"baisse\s+maximale|drawdown|jusqu['’]o[uù]\b.*\b(?:baiss|chut|descend)", re.I)
+# Le message donne aussi une information de profil : l'agent doit l'enregistrer, la question reste chez lui.
+_LEAD_IN = re.compile(r"\b(?:je voudrais savoir|j['’]aimerais savoir|je me demande|dites-moi|dis-moi|peux-tu me dire|"
+                      r"pouvez-vous me dire|pourriez-vous me dire)\b", re.I)
+_PROFILE_CUE = re.compile(r"\brisque|\bhorizon|\bcrypto|\besg\b|objectif|profil|\bje\b|\bj['’]|\bmon\b|\bma\b|\bmes\b|"
+                          r"\bnous\b|\bnotre\b", re.I)
+_RET_ASK = re.compile(r"rendement|\bperformance|combien\b.*\b(?:gagn|rapport|progress|mont)", re.I)
+
+
+def single_asset_question(message, data):
+    """Question explicite et chiffrée sur UN placement du catalogue : (ticker, "drawdown" | "return"), sinon None.
+    Les questions « pourquoi », les comparaisons, les demandes de conseil, une autre devise ou une période précise
+    restent traitées ailleurs (agent ou comparaison)."""
+    if not isinstance(message, str) or len(message.split()) > 20:
+        return None
+    tickers = find_assets(message, data)
+    if len(tickers) != 1 or _WHY.search(message) or requested_period(message):
+        return None
+    if _PROFILE_CUE.search(_LEAD_IN.sub("", message)):
+        return None
+    if re.search(r"%|\d", re.sub(r"\b[A-Z]{1,5}(?:\.[A-Z]{1,3}|-USD)\b", "", message)):
+        return None  # chiffres fournis par le visiteur : question de calcul, pas de lecture
+    t = tickers[0]
+    cur = requested_currency(message)
+    if cur and cur != (data["universe"][t].get("currency") or "").upper():
+        return None  # autre devise : la conversion se fait dans une comparaison ou par l'agent
+    low = message.lower()
+    if _DD_ASK.search(low):
+        return t, "drawdown"
+    if _RET_ASK.search(low):
+        return t, "return"
+    return None
+
+
+def single_asset_reply(analysis, focus, earlier_comparison=False):
+    """Réponse tirée UNIQUEMENT du résultat vérifié d'analyze_asset (même résultat que le graphique)."""
+    r = analysis
+    label = f"{r['name']} ({r['ticker']})"
+    span = f"du {r['start_date']} au {r['end_date']}"
+    basis = (f"{r['observations']} observations de prix ajustés des dividendes et des fractionnements, "
+             f"{r.get('annualization_convention') or ''}").rstrip(", ")
+    if focus == "drawdown":
+        lines = [f"Observation calculée : la baisse maximale de {label} a été de {pct_drop(r['max_drawdown'])}, du sommet "
+                 f"du {r['max_drawdown_peak_date']} au creux du {r['max_drawdown_trough_date']}, en {r['currency']} "
+                 f"(devise de cotation).",
+                 "",
+                 f"Période analysée : {span}, {basis}. Source : {source_line(r.get('sources') or [{'file': 'prices_daily.csv'}])}.",
+                 "",
+                 "En général, la baisse maximale est le plus grand recul entre un sommet et le creux qui le suit. Les "
+                 "dates du sommet et du creux ne prouvent pas une descente continue : le prix a pu remonter puis "
+                 "rebaisser entre les deux."]
+    else:
+        lines = [f"Observation calculée : le rendement cumulé de {label} a été de {pct_signed(r['cumulative_return'])} "
+                 f"{span}, en {r['currency']} (devise de cotation).",
+                 "",
+                 f"Base : {basis}. Source : {source_line(r.get('sources') or [{'file': 'prices_daily.csv'}])}.",
+                 "",
+                 "En général, le rendement cumulé est la variation de valeur entre le début et la fin de la période; il "
+                 "ne dit pas si un sommet antérieur a été retrouvé."]
+    if earlier_comparison:
+        lines += ["", f"Ce chiffre porte sur toutes les dates de cotation de {r['name']}, dans sa devise de cotation. "
+                      "Une comparaison avec un autre placement ne garde que les dates communes et peut convertir les "
+                      "prix dans une autre devise : son chiffre peut donc être un peu différent."]
+    lines += ["", "Ces résultats passés ne prédisent pas les résultats futurs."]
+    return "\n".join(lines)
+
+
 # -------------------------------------------------------- illustration fictive
 _TEACH = re.compile(r"c['’]est quoi|qu['’]est[- ]ce|explique\w*|comprendre|signifie|veut dire|d[ée]finition|"
                     r"\bce qu['’]est\b", re.I)

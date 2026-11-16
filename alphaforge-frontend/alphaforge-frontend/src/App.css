@@ -125,18 +125,33 @@ button.link { background: none; border: none; color: var(--accent); padding: 2px
 .chart .line.s1 { stroke: #d9822b; }
 .chart .bracket line { stroke: var(--danger); stroke-width: 1.4; }
 .chart .bracket text { fill: var(--danger); font-size: 12px; font-weight: 700; }
-.chart .mark circle { fill: #fff; stroke-width: 1.6; }
-.chart .mark.peak circle { stroke: #2e7d4f; }
-.chart .mark.trough circle { stroke: var(--danger); }
+/* contour blanc autour du texte : lisible même là où il croise la courbe */
+.chart .label-bg { fill: #fff; fill-opacity: .9; }
+.chart text.halo { paint-order: stroke fill; stroke: #fff; stroke-width: 4px; stroke-linejoin: round; }
+.chart .mark .dot { stroke: #fff; stroke-width: 1; }
+.chart .mark.ser0 .dot { fill: var(--accent); }
+.chart .mark.ser1 .dot { fill: #d9822b; }
+.chart .mark .leader { stroke: #8a93a3; stroke-width: 1; }
+.chart .mark .pin-c { fill: #fff; stroke-width: 1.8; }
+.chart .mark.peak .pin-c { stroke: #2e7d4f; }
+.chart .mark.trough .pin-c { stroke: var(--danger); }
+.chart .mark.ser1 .pin-c { stroke-dasharray: 3 2; } /* pastille en pointillé = courbe en pointillé */
 .chart .mark text { font-size: 10px; font-weight: 700; fill: var(--ink); }
-.chart-legend, .chart-points, .chart-takeaways { list-style: none; margin: 6px 0 0; padding: 0; font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
+.chart-legend, .chart-points { list-style: none; margin: 6px 0 0; padding: 0; font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
 .chart-legend { flex-direction: row; flex-wrap: wrap; gap: 12px; }
 .swatch { display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--accent); margin-right: 6px; vertical-align: middle; }
 .swatch.s1 { border-top: 2px dashed #d9822b; }
-.pin { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid; font-size: 11px; font-weight: 700; margin-right: 6px; }
+.pin { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid; font-size: 11px; font-weight: 700; margin-right: 6px; flex: none; }
+.chart-points li { display: flex; align-items: flex-start; }
 .chart-points .peak .pin { border-color: #2e7d4f; }
 .chart-points .trough .pin { border-color: var(--danger); }
-.chart-takeaways li { font-weight: 600; }
+.chart-points .ser1 .pin { border-style: dashed; }
+.chart-summary { margin: 8px 0 4px; padding: 8px 10px; background: var(--bg); border-radius: 8px; font-size: 14px; }
+.chart-summary .chart-head { margin: 0 0 4px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.chart-summary ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.chart-summary .val { color: var(--danger); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart-summary .detail { color: var(--muted); font-size: 12px; }
+.chart-summary .chart-conclusion { margin: 6px 0 0; font-weight: 600; }
 .chart-meta { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
 
 /* Portefeuille : barres proportionnelles à la part réelle */
@@ -153,7 +168,7 @@ button.link { background: none; border: none; color: var(--accent); padding: 2px
   .layout { padding: 10px; gap: 10px; }
   .msg { max-width: 92%; }
   .chart { padding: 8px; }
-  .chart-legend, .chart-points, .chart-takeaways { font-size: 14px; }
+  .chart-legend, .chart-points, .chart-summary { font-size: 14px; }
   .guide-panel { grid-template-columns: 1fr; }
   .weights { font-size: 14px; }
 }

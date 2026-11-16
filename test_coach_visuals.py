@@ -319,10 +319,11 @@ def test_learning_question_on_max_drawdown_gets_a_labelled_fictional_example(ven
 
 
 def test_unsupported_percentages_are_still_rejected_with_charts(venv, monkeypatch):
+    """Question qui reste chez l'agent (« pourquoi ») : un pourcentage non justifié bloque la réponse et le graphique."""
     monkeypatch.setattr(base, "script", lambda t: ([("analyze_asset", {"ticker": "TSLA"})],
                                                    lambda r: "Tesla a baissé de 55 % au maximum."))
-    body = venv.post("De combien Tesla a-t-elle baissé ?", "guard-chart-00001")
-    assert body["status"] == "needs_review" and "chart" not in body
+    body = venv.post("Pourquoi Tesla a-t-elle autant baissé ?", "guard-chart-00001")
+    assert venv.spy.call_count == 1 and body["status"] == "needs_review" and "chart" not in body
 
 
 # ================================================= 4. portefeuille : poids exacts du moteur
@@ -435,8 +436,9 @@ def test_named_asset_drawdown_questions_stay_on_the_real_data_path(venv):
     assert (round(m["max_drawdown"], 4), m["peak_date"], m["trough_date"]) == (-0.7297, "2022-01-03", "2023-01-03")
 
 
-@pytest.mark.parametrize("question", ["De combien Tesla a-t-elle baissé ?",
-                                      "Pouvez-vous m'expliquer la baisse maximale de Tesla ?"])
+@pytest.mark.parametrize("question", ["Pouvez-vous m'expliquer la baisse maximale de Tesla ?",
+                                      "Pourquoi Tesla a-t-elle autant baissé ?",
+                                      "Mon risque est faible. Quelle a été la plus forte baisse de Tesla ?"])
 def test_unsupported_percentage_about_a_real_asset_gives_no_chart(venv, monkeypatch, question):
     monkeypatch.setattr(base, "script", lambda t: ([("analyze_asset", {"ticker": "TSLA"})],
                                                    lambda r: "La baisse maximale de Tesla a été de 55 %."))
@@ -453,3 +455,153 @@ def test_mixed_drawdown_question_stays_with_the_agent(venv, monkeypatch):
     body = venv.post("Pouvez-vous m'expliquer la baisse maximale et la volatilité ?", "mixed-dd-000001")
     assert venv.spy.call_count == 1 and body["route"] == "handle_message" and body["status"] == "needs_review"
     assert "chart" not in body
+
+
+# ========== Vercel : question sur UN placement juste après une comparaison (« De combien Tesla … au maximum ? »)
+# Le modèle voyait la comparaison précédente (en CAD, dates communes avec Royal Bank : −69,81 %) et reprenait ce
+# chiffre, absent des outils du tour : le garde-fou rejetait la réponse, donc aucun graphique. Après « Recommencer »,
+# la même question réussissait. Les deux comportements du modèle ci-dessous reproduisent ce rejet.
+Q_COMPARE = "Entre Tesla et Royal Bank, lequel a le plus baissé ?"
+
+
+def from_history(text):
+    return [], lambda r: "D'après la comparaison précédente, la baisse maximale de Tesla a été de −69,81 %."
+
+
+def tool_plus_history(text):
+    return [("analyze_asset", {"ticker": "TSLA"})], lambda r: (
+        f"Observation calculée : la baisse maximale de Tesla a été de −{abs(r[0]['max_drawdown']) * 100:.2f} % en USD. "
+        "Dans la comparaison précédente, elle était de −69,81 %.")
+
+
+def independent_single(ticker):
+    """Recalcul indépendant sur les CSV : prix ajustés de CE placement, toutes ses dates, sa devise de cotation."""
+    with open(os.path.join(DATA, "assets_universe.csv"), encoding="utf-8") as f:
+        meta = {r["ticker"]: r for r in csv.DictReader(f)}[ticker]
+    seen = {}
+    with open(os.path.join(DATA, "prices_daily.csv"), encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            if r["ticker"] == ticker and r["date"] not in seen and float(r["adj_close"]) > 0:
+                seen[r["date"]] = float(r["adj_close"])
+    dates = sorted(seen)
+    px = [seen[d] for d in dates]
+    peak_i, best, bp, bt = 0, 0.0, 0, 0
+    for i, p in enumerate(px):
+        if p > px[peak_i]:
+            peak_i = i
+        if p / px[peak_i] - 1 < best:
+            best, bp, bt = p / px[peak_i] - 1, peak_i, i
+    return {"currency": meta["currency"], "name": meta["name"], "observations": len(dates), "start": dates[0],
+            "end": dates[-1], "max_drawdown": best, "peak": dates[bp], "trough": dates[bt],
+            "cumulative_return": px[-1] / px[0] - 1}
+
+
+def assert_single_asset_answer(env, body, sid, ticker, question, after_comparison):
+    ref = independent_single(ticker)
+    assert body["route"] == "asset_history" and body["status"] == "ok"
+    reply, chart = body["reply"], body["chart"]
+    label = f"{ref['name']} ({ticker})"
+    dd = pct2(ref["max_drawdown"])
+    assert reply.startswith(f"Observation calculée : la baisse maximale de {label} a été de {dd}, du sommet du "
+                            f"{ref['peak']} au creux du {ref['trough']}, en {ref['currency']} (devise de cotation).")
+    assert f"du {ref['start']} au {ref['end']}, {ref['observations']} observations" in reply
+    assert ("Une comparaison avec un autre placement ne garde que les dates communes" in reply) is after_comparison
+    # le graphique vient du même résultat vérifié
+    assert chart["kind"] == "price" and chart["default"] == ref["currency"] and chart["focus"] == "drawdown"
+    v = chart["variants"][ref["currency"]]
+    m = v["metrics"][0]
+    assert abs(m["max_drawdown"] - ref["max_drawdown"]) < 1e-6 and (m["peak_date"], m["trough_date"]) == (ref["peak"], ref["trough"])
+    assert v["period"] == {"start": ref["start"], "end": ref["end"], "observations": ref["observations"]}
+    assert [(k["type"], k["date"]) for k in v["marks"]] == [("peak", ref["peak"]), ("trough", ref["trough"])]
+    guards = {g["name"]: g["passed"] for g in body["checks"]["reply_guards"]}
+    assert guards == {"french_language": True, "no_conformity_claim_without_valid_conclusion": True,
+                      "percentages_supported_by_inputs_or_tools": True}
+    assert [t["tool"] for t in body["checks"]["tools"]] == ["analyze_asset"]
+    assert [a["arguments"] for a in body["evidence"]["actions"]] == [{"ticker": ticker}]
+    msgs = app_module.SESSIONS.get(sid)["messages"]
+    assert msgs[-2]["content"][0]["text"] == question and msgs[-1]["content"][0]["text"] == reply
+
+
+@pytest.mark.parametrize("model", [from_history, tool_plus_history], ids=["answers_from_history", "tool_plus_history"])
+def test_vercel_regression_tesla_follow_up_after_a_comparison(venv, monkeypatch, model):
+    monkeypatch.setattr(base, "script", model)
+    q = "De combien Tesla a-t-elle baissé au maximum ?"
+    draft = model(q)[1]([ag_analysis("TSLA")])
+    assert not {g["name"]: g["passed"] for g in mh.reply_guards(draft, q, [], None)}["percentages_supported_by_inputs_or_tools"]
+    sid = f"vercel-follow-{model.__name__[:8]}"
+    first = venv.post(Q_COMPARE, sid)
+    assert first["route"] == "comparison" and "−69,81 %" in first["reply"]
+    assert {c: pct2(next(m for m in first["chart"]["variants"][c]["metrics"] if m["id"] == "TSLA")["max_drawdown"])
+            for c in ("CAD", "USD")} == {"CAD": "−69,81 %", "USD": "−71,97 %"}  # dates communes avec Royal Bank
+    # (passer le graphique de CAD à USD est une action d'interface : aucune requête)
+    body = venv.post(q, sid)
+    assert venv.spy.call_count == 0  # le modèle n'est pas sollicité : il ne peut pas reprendre −69,81 %
+    assert_single_asset_answer(venv, body, sid, "TSLA", q, after_comparison=True)
+    assert "−72,97 %" in body["reply"] and "−69,81" not in body["reply"] and "−71,97" not in body["reply"]
+
+
+def ag_analysis(ticker):
+    import agent as ag
+    return ag.analyze_asset(ticker)
+
+
+def test_vercel_regression_same_question_in_a_fresh_chat(venv, monkeypatch):
+    monkeypatch.setattr(base, "script", tool_plus_history)
+    q = "De combien Tesla a-t-elle baissé au maximum ?"
+    sid = "vercel-fresh-00001"
+    venv.post(Q_COMPARE, sid)
+    venv.post("Bonjour", sid, reset=True)  # Recommencer
+    body = venv.post(q, sid)
+    assert_single_asset_answer(venv, body, sid, "TSLA", q, after_comparison=False)
+    other = venv.post(q, "vercel-fresh-00002")  # nouvelle session
+    assert other["reply"] == body["reply"] and other["chart"] == body["chart"]
+
+
+@pytest.mark.parametrize("ticker,question", [
+    ("RY.TO", "De combien Royal Bank a-t-elle baissé au maximum ?"),
+    ("BTC-USD", "Quelle a été la plus forte baisse du Bitcoin ?"),
+])
+def test_vercel_regression_second_asset_follow_up_and_fresh(venv, monkeypatch, ticker, question):
+    monkeypatch.setattr(base, "script", from_history)
+    sid = "vercel-2nd-" + ticker.replace(".", "").replace("-", "")[:6]
+    venv.post(Q_COMPARE if ticker == "RY.TO" else "Compare Bitcoin et GLD en USD", sid)
+    body = venv.post(question, sid)
+    assert venv.spy.call_count == 0
+    assert_single_asset_answer(venv, body, sid, ticker, question, after_comparison=True)
+    fresh = venv.post(question, sid + "-new")
+    assert_single_asset_answer(venv, fresh, sid + "-new", ticker, question, after_comparison=False)
+    if ticker == "RY.TO":  # sur ses propres dates : −21,21 % (la comparaison CAD donnait −21,02 %)
+        assert "−21,21 %" in body["reply"] and "du sommet du 2022-01-17" in body["reply"]
+
+
+def test_single_asset_return_question_uses_the_same_verified_result(venv):
+    body = venv.post("Quel a été le rendement de Royal Bank ?", "ret-ry-00000001")
+    ref = independent_single("RY.TO")
+    assert body["route"] == "asset_history" and body["chart"]["focus"] == "return"
+    expected = f"+{ref['cumulative_return'] * 100:.2f}".replace(".", ",") + " %"
+    assert f"rendement cumulé de Royal Bank of Canada (RY.TO) a été de {expected}" in body["reply"]
+    assert body["chart"]["variants"]["CAD"]["marks"] == [] and all(g["passed"] for g in body["checks"]["reply_guards"])
+
+
+def test_single_asset_reply_is_still_guarded(venv, monkeypatch):
+    original = vis.single_asset_reply
+    monkeypatch.setattr(vis, "single_asset_reply", lambda *a, **k: original(*a, **k) + "\n\nElle a ensuite rechuté de 55 %.")
+    sid = "single-guard-00001"
+    body = venv.post("De combien Tesla a-t-elle baissé au maximum ?", sid)
+    assert body["status"] == "needs_review" and "chart" not in body and "55 %" not in body["reply"]
+    assert app_module.SESSIONS.get(sid)["messages"][-1]["content"][0]["text"] == body["reply"]
+
+
+def test_single_asset_path_boundaries(venv):
+    """Restent chez l'agent : « pourquoi », profil donné dans le même message, autre devise, période, comparaison."""
+    for q in ("Pourquoi Tesla a-t-elle autant baissé ?", "Mon risque est faible. Quelle a été la plus forte baisse de Tesla ?",
+              "De combien Tesla a-t-elle baissé en dollars canadiens ?", "De combien Tesla a-t-elle baissé en 2022 ?",
+              "J'aime bien Tesla comme entreprise."):
+        before = venv.spy.call_count
+        body = venv.post(q, "bound-" + str(abs(hash(q)))[:10])
+        assert venv.spy.call_count == before + 1 and body["route"] == "handle_message", q
+    sid = "bound-pending-0001"  # une demande de portefeuille en attente n'est pas perdue
+    venv.post("Je veux que vous me fassiez un portefeuille", sid)
+    venv.post("15 ans et plus", sid)
+    assert venv.post("De combien Tesla a-t-elle baissé au maximum ?", sid)["route"] == "asset_history"
+    assert app_module.SESSIONS.get_pending(sid)["confirm"]["value"] == 15

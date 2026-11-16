@@ -536,6 +536,26 @@ def _compare_turn(user_message, state, compare, data):
     return body, st, keep(first=tickers[0], currency=currency, period=period)
 
 
+def _single_asset_turn(user_message, state, data):
+    """Question explicite sur UN placement (« De combien Tesla a-t-elle baissé au maximum ? ») : réponse et graphique
+    tirés du MÊME résultat vérifié d'analyze_asset, sans laisser le modèle reprendre un chiffre d'une réponse
+    précédente (par exemple une comparaison en CAD limitée aux dates communes). Retourne None sinon."""
+    found = vis.single_asset_question(user_message, data)
+    if not found:
+        return None
+    ticker, focus = found
+    analysis = ag.analyze_asset(ticker)
+    chart = vis.asset_chart(analysis, data, focus)
+    if analysis.get("status") != "ok" or chart is None:
+        return None  # données inutilisables : l'agent explique l'erreur de l'outil
+    earlier = any(f"({ticker})" in t and "dates communes" in t
+                  for m in (state or {}).get("messages") or [] if m.get("role") == "assistant"
+                  for t in [" ".join(b.get("text", "") for b in m.get("content", []) if isinstance(b, dict))])
+    reply = vis.single_asset_reply(analysis, focus, earlier)
+    calls = [{"name": "analyze_asset", "input": {"ticker": ticker}, "result": analysis}]
+    return _guide_body(state, user_message, reply, calls, route="asset_history", chart=chart)
+
+
 def process_turn(user_message, state, pending=None, compare=None, chat_history=None):
     """Un tour complet : guide / comparaison déterministes, sinon l'agent. Retourne (réponse, état, demande de
     portefeuille en attente, comparaison en attente)."""
@@ -554,6 +574,10 @@ def process_turn(user_message, state, pending=None, compare=None, chat_history=N
     if handled is not None:
         body, new_state, compare = handled
         return body, new_state, pending, compare
+    single = _single_asset_turn(user_message, state, data)
+    if single is not None:
+        body, new_state = single
+        return body, new_state, pending, None
     # Le message ne répondait pas à « quels placements ? » : la comparaison en attente s'arrête là.
     body, new_state, pending = process_chat(user_message, state, pending, chat_history)
     return body, new_state, pending, None
