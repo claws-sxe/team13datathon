@@ -7,6 +7,7 @@ import Alerts from "./components/Alerts";
 import Trace from "./components/Trace";
 import { getSuggestions } from "./suggestions";
 import { nextResult, resetResult } from "./portfolioState";
+import { toggleGuide } from "./guide";
 import "./App.css";
 
 const WELCOME = {
@@ -32,6 +33,7 @@ export default function App() {
   const [result, setResult] = useState(null); // { profile, portfolio, metrics, alerts, trace }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [ui, setUi] = useState({ guideOpen: false }); // état d'interface seulement (guide « Idées de questions »)
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant")?.content;
   const suggestions = getSuggestions(lastAssistant, result?.suggestions);
 
@@ -43,7 +45,12 @@ export default function App() {
     try {
       const res = await sendMessage({ session_id: sid, messages: next });
       // Réponse vide (ex. seulement des données de profil) : pas de bulle vide dans le chat
-      if (res.reply) setMessages([...next, { role: "assistant", content: res.reply }]);
+      // Le graphique et la liste des placements restent attachés à la réponse qu'ils accompagnent.
+      if (res.reply) {
+        const extra = { ...(res.chart && { chart: res.chart }), ...(res.assets && { assets: res.assets }),
+                        ...(res.compareFirst && { compareFirst: res.compareFirst }) };
+        setMessages([...next, { role: "assistant", content: res.reply, ...extra }]);
+      }
       // Profil : on garde ce qu'on savait si la réponse n'en parle pas. Portefeuille accepté et métriques : gardés
       // pendant les questions de suivi, remplacés par un nouveau build réussi, effacés par un conflit (voir portfolioState.js)
       setResult((prev) => nextResult(prev, res));
@@ -54,18 +61,25 @@ export default function App() {
     }
   }
 
+  function pickGuide(action) {
+    setUi((u) => ({ ...u, guideOpen: false }));
+    send(action.message);
+  }
+
   function pickPersona(name) {
     // Nouvelle session pour chaque persona, pour que les profils ne se mélangent pas
     const sid = newSession();
     setSessionId(sid);
     setResult(resetResult());
+    setUi({ guideOpen: false });
     send(PERSONAS[name], [WELCOME], sid); // sid explicite : l'état React n'est pas encore à jour
   }
 
   function reset() {
     setSessionId(newSession());
-    setMessages([WELCOME]);
+    setMessages([WELCOME]); // efface aussi les graphiques, attachés aux messages
     setResult(resetResult());
+    setUi({ guideOpen: false });
     setError(null);
   }
 
@@ -84,7 +98,8 @@ export default function App() {
         </aside>
 
         <section className="col col-center">
-          <Chat messages={messages} loading={loading} error={error} onSend={(t) => send(t)} suggestions={suggestions} />
+          <Chat messages={messages} loading={loading} error={error} onSend={(t) => send(t)} suggestions={suggestions}
+                guideOpen={ui.guideOpen} onToggleGuide={() => setUi(toggleGuide)} onPickGuide={pickGuide} />
         </section>
 
         <aside className="col col-right">

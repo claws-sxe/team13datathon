@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test src/portfolioState.test.js src/suggestions.test.js"
+    "test": "node --test src/portfolioState.test.js src/suggestions.test.js src/guide.test.js src/chartModel.test.js src/portfolioView.test.js src/render.test.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

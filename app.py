@@ -18,6 +18,7 @@ if AGENT_DIR not in sys.path:
 import agent as ag  # noqa: E402
 import message_handler as mh  # noqa: E402  (agent d'investissement : handle_message)
 import chat_bridge as bridge  # noqa: E402
+import coach_visuals as vis  # noqa: E402
 
 app = FastAPI()
 
@@ -245,8 +246,9 @@ def with_context(message, state, coach_text):
     """Première réponse d'une conversation serveur : le coach avait posé l'accueil côté site, l'agent ne l'a pas vu.
     On lui donne la question à laquelle une réponse courte répond; la réponse de l'investisseur reste intacte."""
     question = _question_of(coach_text)
-    if (state or {}).get("messages") or not question or bridge.is_question(message) or len(message.split()) > 8:
-        return message
+    if (state or {}).get("messages") or not question or bridge.is_question(message) or len(message.split()) > 8 \
+            or bridge.classify_portfolio_intent(message) is not None:
+        return message  # une demande (« Je veux construire mon portefeuille fictif ») n'est pas une réponse
     return f"[Réponse à la question du coach : « {question} »] {message}"
 
 
@@ -303,6 +305,8 @@ def process_chat(user_message, state, pending=None, chat_history=None):
                 pending = _portfolio_turn(body, new_state, state, message, pending)
         if body["route"] == "handle_message" and bridge.is_tolerable_drop_answer(user_message, coach_text):
             _risk_percentage_reply(body, new_state, state, message, bridge.percent_without_risk_category(user_message))
+        if body["route"] == "handle_message" and body["status"] == "ok":
+            _attach_chart(body, new_state, user_message, message, calls)  # réponse validée par les garde-fous seulement
     body["profile"] = bridge.profile_for_site(new_state)
     return body, new_state, pending
 
@@ -365,20 +369,205 @@ def _portfolio_turn(body, new_state, prior_state, message, pending):
     return None
 
 
+def _turn_chart(user_message, calls):
+    """Graphique de la réponse de l'agent, choisi d'après la QUESTION :
+    - question historique sur UN placement analysé ce tour : son prix ajusté, tiré du même résultat d'outil;
+    - question d'apprentissage sur la baisse maximale : illustration étiquetée « Exemple fictif »;
+    - sinon (définition, simple mention d'une entreprise...) : aucun graphique."""
+    data = ag._data()
+    analyses = [ag._as_dict(c.get("result")) for c in calls if c["name"] == "analyze_asset"]
+    analyses = [r for r in analyses if r.get("status") == "ok"]
+    if len({r.get("ticker") for r in analyses}) == 1:
+        focus = vis.history_focus(user_message, analyses[-1]["ticker"], data)
+        return vis.asset_chart(analyses[-1], data, focus) if focus else None
+    if not analyses and vis.wants_drawdown_illustration(user_message, data):
+        return vis.drawdown_example_chart()
+    return None
+
+
+def _attach_chart(body, new_state, user_message, message, calls):
+    chart = _turn_chart(user_message, calls)
+    if not chart:
+        return
+    if chart["kind"] == "example":
+        # Le texte décrit la même illustration que le graphique; il est revalidé par les garde-fous.
+        text = body["reply"].rstrip() + "\n\n" + vis.DRAWDOWN_EXAMPLE_TEXT
+        guards = mh.reply_guards(text, message, calls, None)
+        if not all(g["passed"] for g in guards):
+            return
+        body["reply"] = text
+        body["checks"] = {**body["checks"], "reply_guards": guards}
+        _replace_last_assistant_text(new_state, text)
+    body["chart"] = chart
+
+
+# ------------------------------------------------ guide du coach et comparaison de deux placements
+COMPARE_ASKS = ("Quels placements aimeriez-vous comparer", "Avec quel placement souhaitez-vous comparer")
+
+
+def _append_exchange(state, user_text, reply):
+    """Tour sans appel au modèle : on garde quand même l'échange dans l'historique de la conversation."""
+    new = copy.deepcopy(state) if state else mh.new_session_state()
+    new["messages"] = list(new["messages"]) + [{"role": "user", "content": [{"text": user_text}]},
+                                               {"role": "assistant", "content": [{"text": reply}]}]
+    new["turn_count"] += 1
+    return new
+
+
+def _guide_body(state, user_text, reply, calls=None, route="guide", **extra):
+    """Réponse déterministe du guide ou de la comparaison : garde-fous et preuves recalculés sur CE texte."""
+    calls = calls or []
+    guards = mh.reply_guards(reply, user_text, calls, None)
+    body = {"reply": reply, "triggered": False, "status": "ok", "route": route, **extra}
+    if not all(g["passed"] for g in guards):
+        body.update(reply=mh._REPLIES["needs_review"], status="needs_review")
+        for k in ("chart", "assets", "suggestions"):
+            body.pop(k, None)
+        guards = mh.reply_guards(body["reply"], user_text, [], None)
+        calls = []
+    body["checks"] = {"input": {"message_ok": True}, "reply_guards": guards,
+                      "tools": [{"tool": c["name"], "status": _status_of(c)} for c in calls]}
+    body["evidence"] = ag.build_evidence(calls)
+    new_state = _append_exchange(state, user_text, body["reply"])
+    body["profile"] = bridge.profile_for_site(new_state)
+    return body, new_state
+
+
+def _catalog_extra(data):
+    return {"assets": vis.catalog(data)}
+
+
+def _compare_answer(state, user_text, tickers, currency, asks_fell, data, period=None):
+    cur = currency or "CAD"  # CAD par défaut, affiché; USD disponible dans le graphique
+    a, b = tickers[0], tickers[1]
+    results = {c: vis.compute_comparison(data, a, b, c, period) for c in vis.CURRENCIES}
+    main = results[cur]
+    if main["status"] != "ok":
+        body, new_state = _guide_body(state, user_text, main["reason"] + " Je ne remplace pas ces placements par d'autres.",
+                                      route="comparison_unavailable", **_catalog_extra(data))
+        return body, new_state
+    own = {t: ag.analyze_asset(t) for t in (a, b)}  # même outil que les questions sur un seul placement
+    notes = vis.standalone_notes(main, own)
+    reply = vis.comparison_reply(main, asks_fell, notes)
+    chart = vis.comparison_chart(results, cur, asks_fell)
+    calls = vis.legs_as_calls(main, data)
+    if notes:
+        calls += [{"name": "analyze_asset", "input": {"ticker": t}, "result": own[t]} for t in (a, b)]
+    return _guide_body(state, user_text, reply, calls, route="comparison",
+                       **({"chart": chart} if chart else {}))
+
+
+_NOT_A_NAME = re.compile(r"^\W*(?:bonjour|salut|merci|non|oui|ok|d['’]accord|rien|aucun\w*|je ne sais pas)\b", re.I)
+
+
+def _compare_turn(user_message, state, compare, data):
+    """Retourne (body, new_state, compare) si le message relève du guide ou d'une comparaison, sinon None.
+    `compare` = comparaison en attente : {"first", "currency", "period", "turn"} (tour où la question a été posée)."""
+    turn = (state or {}).get("turn_count", 0)
+    awaiting = bool(compare) and compare.get("turn") == turn  # le coach vient de demander quels placements comparer
+
+    def keep(**kw):
+        return {"first": None, "currency": None, "period": None, **(compare or {}), **kw, "turn": turn + 1}
+
+    guide = vis.guide_intent(user_message)
+    named = vis.find_assets(user_message, data)
+    if guide == "learn":
+        body, st = _guide_body(state, user_message, vis.LEARN_QUESTION, route="guide_learn",
+                               suggestions=[{"label": l, "message": m} for l, m in vis.TOPICS])
+        return body, st, None
+    if guide == "compare_ask" and not named:  # « Comparer deux placements » sans placement nommé : on demande lesquels
+        body, st = _guide_body(state, user_message, vis.COMPARE_QUESTION, route="compare_ask", **_catalog_extra(data))
+        return body, st, {"first": None, "currency": vis.requested_currency(user_message),
+                          "period": vis.requested_period(user_message), "turn": turn + 1}
+    req = vis.compare_request(user_message, data)
+    if req is None and awaiting and not bridge.is_question(user_message) \
+            and bridge.classify_portfolio_intent(user_message) is None and not bridge.is_cancel_phrase(user_message):
+        # réponse à « Quels placements aimeriez-vous comparer ? » : un nom, un symbole, ou un nom inconnu
+        if named and vis.is_naming_answer(user_message, data):
+            req = {"tickers": named, "unresolved": [], "currency": vis.requested_currency(user_message),
+                   "period": vis.requested_period(user_message), "asks_fell": False}
+        elif not named and len(user_message.split()) <= 3 and not _NOT_A_NAME.search(user_message) \
+                and not re.search(r"\d", user_message) and not bridge._RISK_WORD.search(user_message):
+            req = {"tickers": [], "unresolved": [user_message.strip(" .!")], "currency": None, "period": None,
+                   "asks_fell": False}
+    if req is None:
+        return None
+    tickers = list(req["tickers"])
+    first = (compare or {}).get("first") if awaiting else None
+    if first and len(tickers) == 1 and first == tickers[0] and not req["unresolved"]:
+        name = data["universe"][first]["name"]
+        body, st = _guide_body(state, user_message, f"{name} ({first}) est déjà choisi. "
+                               + vis.COMPARE_SECOND_QUESTION.format(name=f"{name} ({first})"),
+                               route="compare_ask", compare_first={"ticker": first, "name": name}, **_catalog_extra(data))
+        return body, st, keep()
+    if first and len(tickers) == 1:
+        tickers = [first] + tickers
+    currency = req["currency"] or (compare or {}).get("currency")
+    period = req.get("period") or (compare or {}).get("period")
+    if currency == "OTHER":
+        names = " et ".join(f"{data['universe'][t]['name']} ({t})" for t in tickers[:2]) or "ces placements"
+        body, st = _guide_body(state, user_message, "Je peux afficher une comparaison en dollars canadiens (CAD) ou en "
+                               "dollars américains (USD) seulement. Laquelle préférez-vous ?", route="compare_ask",
+                               suggestions=[{"label": c, "message": f"Comparer {names} en {c}."} for c in vis.CURRENCIES])
+        return body, st, None
+    if req["unresolved"]:
+        what = " ni sur ".join(f"« {u} »" for u in req["unresolved"])
+        known = [t for t in tickers if t != first] if first else tickers
+        keep_first = (known or [first])[0] if (known or first) else None
+        extra = {"compare_first": {"ticker": keep_first, "name": data["universe"][keep_first]["name"]}} if keep_first else {}
+        body, st = _guide_body(state, user_message, f"Je n'ai pas de données sur {what} dans mon catalogue de placements, "
+                               "et je ne le remplace pas par un autre placement. Quel placement du catalogue souhaitez-vous "
+                               "utiliser à la place ? Vous pouvez écrire son nom ou son symbole.",
+                               route="comparison_unavailable", **extra, **_catalog_extra(data))
+        return body, st, keep(first=keep_first, currency=currency, period=period)
+    if len(tickers) >= 2:
+        if len(tickers) > 2:
+            names = ", ".join(f"{data['universe'][t]['name']} ({t})" for t in tickers)
+            body, st = _guide_body(state, user_message, f"Vous avez nommé {len(tickers)} placements ({names}). Je compare "
+                                   "deux placements à la fois : lesquels choisissez-vous ?", route="compare_ask",
+                                   **_catalog_extra(data))
+            return body, st, keep(first=None, currency=currency, period=period)
+        body, st = _compare_answer(state, user_message, tickers, currency, req["asks_fell"], data, period)
+        return body, st, None
+    name = data["universe"][tickers[0]]["name"]
+    body, st = _guide_body(state, user_message, vis.COMPARE_SECOND_QUESTION.format(name=f"{name} ({tickers[0]})"),
+                           route="compare_ask", compare_first={"ticker": tickers[0], "name": name},
+                           **_catalog_extra(data))
+    return body, st, keep(first=tickers[0], currency=currency, period=period)
+
+
+def process_turn(user_message, state, pending=None, compare=None, chat_history=None):
+    """Un tour complet : guide / comparaison déterministes, sinon l'agent. Retourne (réponse, état, demande de
+    portefeuille en attente, comparaison en attente)."""
+    if compare and bridge.is_cancel_phrase(user_message):
+        compare = None
+    if compare and compare.get("turn") != (state or {}).get("turn_count", 0):
+        compare = None  # la question « quels placements ? » n'est plus la dernière : on n'attend plus de réponse
+    handled = _compare_turn(user_message, state, compare, ag._data())
+    if handled is not None:
+        body, new_state, compare = handled
+        return body, new_state, pending, compare
+    # Le message ne répondait pas à « quels placements ? » : la comparaison en attente s'arrête là.
+    body, new_state, pending = process_chat(user_message, state, pending, chat_history)
+    return body, new_state, pending, None
+
+
 @app.post("/api/chat")
 def chat_with_agent(request: ChatRequest):
     sid = request.session_id
     try:
         if sid is None:  # pas de session : conversation neuve, rien n'est conservé
-            body, _, _ = process_chat(request.user_message, None, None, request.chat_history)
+            body, _, _, _ = process_turn(request.user_message, None, None, None, request.chat_history)
             return body
         with SESSIONS.lock_for(sid):
             if request.reset:
                 SESSIONS.reset(sid)
-            body, new_state, pending = process_chat(request.user_message, SESSIONS.get(sid), SESSIONS.get_pending(sid),
-                                                 request.chat_history)
+            body, new_state, pending, compare = process_turn(
+                request.user_message, SESSIONS.get(sid), SESSIONS.get_pending(sid), SESSIONS.get_compare(sid),
+                request.chat_history)
             SESSIONS.put(sid, new_state)
             SESSIONS.put_pending(sid, pending)
+            SESSIONS.put_compare(sid, compare)
         body["session_id"] = sid
         return body
     except Exception:  # noqa: BLE001

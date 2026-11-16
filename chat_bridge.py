@@ -23,6 +23,7 @@ class SessionStore:
         self._max = max_sessions
         self._states = OrderedDict()
         self._pending = {}  # demande de portefeuille en attente d'informations, par session
+        self._compare = {}  # comparaison de deux placements en attente du second, par session
         self._locks = {}
         self._guard = threading.Lock()
 
@@ -46,6 +47,7 @@ class SessionStore:
                 old, _ = self._states.popitem(last=False)
                 self._locks.pop(old, None)
                 self._pending.pop(old, None)
+                self._compare.pop(old, None)
 
     def get_pending(self, session_id):
         with self._guard:
@@ -59,11 +61,24 @@ class SessionStore:
             else:
                 self._pending[session_id] = copy.deepcopy(pending)
 
+    def get_compare(self, session_id):
+        with self._guard:
+            c = self._compare.get(session_id)
+            return copy.deepcopy(c) if c is not None else None
+
+    def put_compare(self, session_id, compare):
+        with self._guard:
+            if compare is None:
+                self._compare.pop(session_id, None)
+            else:
+                self._compare[session_id] = copy.deepcopy(compare)
+
     def reset(self, session_id):
-        """Recommencer : oublie l'état de conversation ET la demande de portefeuille en attente."""
+        """Recommencer : oublie l'état de conversation, la demande de portefeuille et la comparaison en attente."""
         with self._guard:
             self._states.pop(session_id, None)
             self._pending.pop(session_id, None)
+            self._compare.pop(session_id, None)
 
     def __len__(self):
         return len(self._states)

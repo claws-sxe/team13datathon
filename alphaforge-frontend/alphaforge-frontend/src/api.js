@@ -10,6 +10,8 @@
 // et ne peut plus planter (écran blanc).
 import { mockBackend } from "./mockBackend";
 import { normalizeSuggestions } from "./suggestions";
+import { normalizeChart } from "./chartModel";
+import { normalizeAssets } from "./guide";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -200,6 +202,9 @@ function normalize(data) {
     alerts: normalizeAlerts(d.alerts),
     trace: normalizeTrace(d.trace),
     suggestions: normalizeSuggestions(d.suggestions),
+    chart: normalizeChart(d.chart),           // graphique de CETTE réponse (séries calculées par le backend)
+    assets: normalizeAssets(d.assets),        // catalogue réel, pour « Voir les placements disponibles »
+    compareFirst: d.compare_first && typeof d.compare_first.ticker === "string" ? d.compare_first : null,
     // Contrôles et preuves de l'agent, conservés tels quels pour affichage ou débogage
     status: d.status,
     checks: d.checks ?? null,
