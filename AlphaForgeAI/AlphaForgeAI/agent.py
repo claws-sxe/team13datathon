@@ -431,7 +431,9 @@ def _portfolio_items(tool, d, results, status):
 
 
 _TOOL_ALIAS = {"analyze_backend_portfolio": "analyze_portfolio",
-               "check_profile_against_backend_portfolio": "check_profile_vs_portfolio"}
+               "check_profile_against_backend_portfolio": "check_profile_vs_portfolio",
+               # une jambe d'une comparaison de deux actifs : mêmes indicateurs qu'analyze_asset, devise convertie
+               "compare_asset_leg": "analyze_asset"}
 
 
 def _position_evidence(tool, metadata, results):
